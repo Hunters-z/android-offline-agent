@@ -63,6 +63,13 @@ def parse_tool_call(text):
             for close in ("}", "}}", "}}}", "])", "}])"):
                 try: return json.loads(chunk + close)
                 except Exception: pass
+    # fallback: seluruh teks dari '{' pertama, auto-tutup
+    i = text.find('{')
+    if i != -1:
+        base = text[i:].replace(")", "}").rstrip()
+        for close in ("", "}", "}}", "}}}", "}])"):
+            try: return json.loads(base + close)
+            except Exception: pass
     return None
 
 def step(history):
