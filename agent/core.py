@@ -78,8 +78,6 @@ def step(history):
             history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
             return step(history)  # lanjut jawab dengan hasil tool
         except Exception:
-            # JSON tool rusak (model kecil sering begitu) — paksa parse permissif
-        except Exception:
             return text  # jawab apa adanya, jangan matikan sesi
     return text
 
