@@ -58,8 +58,19 @@ def step(history):
             history.append({"role":"assistant","content":text})
             history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
             return step(history)  # lanjut jawab dengan hasil tool
-        except Exception as e:
-            return f"[tool error] {e}"
+        except Exception:
+            # JSON tool rusak (model kecil sering begitu) — paksa parse permissif
+            try:
+                txt = m.group(0)
+                txt = re.sub(r",\s*}", "}", txt).replace("'", '"')
+                call = json.loads(txt)
+                name, args = call.get("tool"), call.get("args", {})
+                result = TOOLS[name](**args) if name in TOOLS and isinstance(args, dict) else {"error":"tool tidak valid"}
+                history.append({"role":"assistant","content":text})
+                history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
+                return step(history)
+            except Exception:
+                return text  # jawab apa adanya, jangan matikan sesi
     return text
 
 def chat():
