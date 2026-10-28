@@ -3,127 +3,216 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Loka — AI Offline</title>
+<title>Loka — Agent Pribadi Offline</title>
 <style>
 :root{
-  --bg:#07090f; --panel:rgba(18,22,34,.72); --panel2:rgba(28,34,50,.6);
-  --line:rgba(120,140,190,.14); --txt:#e8ecf6; --dim:#8b93a8;
-  --acc:#7c5cff; --acc2:#38bdf8; --ok:#34d399; --danger:#f87171;
+  --bg:#f6f7f9; --card:#ffffff; --line:#ececf0; --txt:#17181c; --dim:#8a8f9c;
+  --blue:#1a6dff; --blue-soft:#eef3ff; --green:#18a05e; --red:#e5484d;
+  --amber:#f5a623; --radius:18px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:
-  radial-gradient(1000px 500px at 85% -10%, rgba(124,92,255,.16), transparent 60%),
-  radial-gradient(800px 400px at -10% 110%, rgba(56,189,248,.10), transparent 60%),
-  var(--bg);
-  color:var(--txt); font-family:'Segoe UI',system-ui,sans-serif; height:100dvh; display:flex; overflow:hidden}
-/* SIDEBAR */
-aside{width:270px; background:var(--panel); border-right:1px solid var(--line);
-  backdrop-filter:blur(18px); display:flex; flex-direction:column; padding:18px 14px; flex-shrink:0}
-.logo{display:flex; align-items:center; gap:10px; padding:4px 8px 16px}
-.logo .dot{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--acc),var(--acc2));
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
-.logo h1{font-size:17px; letter-spacing:.4px}
-.logo small{display:block;color:var(--dim);font-size:10.5px;font-weight:400;letter-spacing:1.5px}
-.newchat{border:1px solid var(--line); background:var(--panel2); color:var(--txt); border-radius:12px;
-  padding:11px; font-size:13.5px; cursor:pointer; margin-bottom:14px}
-.newchat:hover{border-color:var(--acc)}
-.sect{font-size:10px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; padding:6px 8px}
-.hist{flex:1; overflow-y:auto}
-.hist .item{padding:9px 10px; font-size:13px; color:var(--dim); border-radius:9px; cursor:pointer;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.hist .item:hover{background:var(--panel2); color:var(--txt)}
-.foot{font-size:10.5px; color:var(--dim); padding:10px 8px 0; border-top:1px solid var(--line)}
-.foot b{color:var(--ok)}
-/* MAIN */
-main{flex:1; display:flex; flex-direction:column; min-width:0}
-header{display:flex; align-items:center; gap:12px; padding:14px 22px; border-bottom:1px solid var(--line);
-  background:rgba(10,13,20,.5); backdrop-filter:blur(14px)}
-header .st{font-size:13px} header .st b{display:block; font-size:14.5px}
-.pill{font-size:10.5px; color:var(--ok); border:1px solid rgba(52,211,153,.3); background:rgba(52,211,153,.08);
-  padding:3px 9px; border-radius:99px}
-#modelBtn{margin-left:auto; display:flex; align-items:center; gap:8px; border:1px solid var(--line);
-  background:var(--panel2); color:var(--txt); padding:8px 14px; border-radius:11px; font-size:13px; cursor:pointer}
-#modelBtn:hover{border-color:var(--acc)}
-#chat{flex:1; overflow-y:auto; padding:26px 6%; display:flex; flex-direction:column; gap:18px}
-.row{display:flex; gap:12px; max-width:780px; width:100%; margin:0 auto}
-.row.me{flex-direction:row-reverse}
-.av{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
-.row.ai .av{background:linear-gradient(135deg,var(--acc),var(--acc2))}
-.row.me .av{background:rgba(139,147,168,.18)}
-.bub{padding:13px 16px; border-radius:15px; font-size:14.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word}
-.row.ai .bub{background:var(--panel); border:1px solid var(--line); border-top-left-radius:5px}
-.row.me .bub{background:linear-gradient(135deg,rgba(124,92,255,.28),rgba(56,189,248,.20));
-  border:1px solid rgba(124,92,255,.25); border-top-right-radius:5px}
-.typing{display:inline-flex; gap:4px; padding:4px}
-.typing i{width:6px;height:6px;border-radius:50%;background:var(--dim);animation:bl 1.2s infinite}
-.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
-@keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
-#composer{padding:14px 6% 20px}
-.cbox{max-width:780px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;
-  background:var(--panel); border:1px solid var(--line); border-radius:17px; padding:10px 12px; backdrop-filter:blur(16px)}
-.cbox:focus-within{border-color:rgba(124,92,255,.5)}
-textarea{flex:1; background:none; border:none; outline:none; color:var(--txt); font-size:14.5px;
-  resize:none; font-family:inherit; max-height:130px; line-height:1.5; padding:6px 4px}
-#send{width:38px;height:38px;border-radius:11px;border:none;cursor:pointer;
-  background:linear-gradient(135deg,var(--acc),var(--acc2)); color:#fff; font-size:16px; flex-shrink:0}
-#send:disabled{opacity:.4}
+body{background:var(--bg); color:var(--txt);
+  font-family:-apple-system,'Segoe UI',Roboto,sans-serif; height:100dvh; display:flex; flex-direction:column; overflow:hidden}
+button{font-family:inherit}
+/* HEADER */
+header{display:flex; align-items:center; justify-content:space-between; padding:12px 16px 8px; background:var(--bg)}
+.hbtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);
+  font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.avatar-wrap{text-align:center}
+.avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#ffe9c2,#ffd7e0);
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+  box-shadow:0 4px 14px rgba(0,0,0,.08); border:3px solid #fff; cursor:pointer; transition:transform .3s}
+.avatar.think{animation:pulse 1.1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.avatar small{display:block;font-size:12px;font-weight:600;margin-top:4px}
+.status{font-size:11px;color:var(--blue)}
+/* PAGES */
+#pages{flex:1; overflow:hidden; position:relative}
+.page{position:absolute; inset:0; overflow-y:auto; padding:6px 16px 90px; display:none}
+.page.on{display:block}
+.page h2{font-size:24px; font-weight:800; margin:10px 0 14px}
+.sect{font-size:13px;font-weight:700;margin:16px 0 8px; display:flex; align-items:center; justify-content:space-between}
+.sect a{color:var(--blue); font-size:12px; text-decoration:none}
+.sect .plus{color:var(--blue); font-size:18px; cursor:pointer}
+/* CHAT */
+#page-chat .msgs{display:flex; flex-direction:column; gap:10px; padding-top:8px}
+.msg{max-width:82%; padding:11px 14px; border-radius:18px; font-size:14.5px; line-height:1.55; white-space:pre-wrap; word-break:break-word}
+.msg.me{align-self:flex-end; background:var(--blue); color:#fff; border-bottom-right-radius:6px}
+.msg.ai{align-self:flex-start; background:var(--card); border:1px solid var(--line); border-bottom-left-radius:6px}
+.msg.tool{align-self:center; background:var(--blue-soft); color:var(--blue); font-size:12.5px; border-radius:12px; padding:8px 12px}
+/* FEED */
+.fcard{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:12px}
+.fcard .fhead{display:flex; gap:10px; align-items:flex-start; margin-bottom:8px}
+.fcard .fico{width:38px;height:38px;border-radius:11px;background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.fcard b{font-size:14.5px; line-height:1.4}
+.fcard p{font-size:13.5px; color:#3c4150; line-height:1.6; margin:4px 0 10px}
+.facts{display:flex; align-items:center; gap:18px; font-size:12.5px; color:var(--dim)}
+.facts .lk{cursor:pointer} .facts .lk.on{color:var(--red)}
+/* GOALS */
+.gcard{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px; margin-bottom:10px; display:flex; gap:11px; align-items:flex-start}
+.gcard .chk{width:20px;height:20px;border:2px solid #c9ccd6;border-radius:6px;margin-top:2px;flex-shrink:0;cursor:pointer}
+.gcard.done .chk{background:var(--green);border-color:var(--green)}
+.gcard.done b{text-decoration:line-through;color:var(--dim)}
+.gcard b{font-size:14px; display:block}
+.gcard small{font-size:12px;color:var(--dim);display:block;margin-top:3px}
+.switch{margin-left:auto; width:44px;height:26px;border-radius:99px;background:#d6d9e0;position:relative;flex-shrink:0;cursor:pointer;transition:.2s}
+.switch.on{background:var(--blue)}
+.switch i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on i{left:21px}
+.rrow{display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-bottom:9px}
+.rrow .zap{color:var(--green)}
+.rrow b{font-size:13.5px;display:block} .rrow small{font-size:11.5px;color:var(--dim)}
+/* IDEAS */
+.idea{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;margin-bottom:10px;font-size:14px;line-height:1.55}
+.idea b{display:block;margin-bottom:4px}
+/* TOOLS */
+.trow{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.trow .tico{width:40px;height:40px;border-radius:12px;background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:19px}
+.trow b{font-size:14px;display:block} .trow small{font-size:12px;color:var(--dim)}
+/* BOTTOM NAV */
+nav{position:fixed; bottom:0; left:0; right:0; height:64px; background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px); border-top:1px solid var(--line); display:flex; z-index:30}
+nav button{flex:1; background:none; border:none; font-size:20px; cursor:pointer; color:#b6bac4; position:relative}
+nav button.on{color:var(--txt)}
+nav button.on::after{content:''; position:absolute; top:-1px; left:50%; transform:translateX(-50%);
+  width:18px; height:3px; border-radius:99px; background:var(--blue)}
+/* COMPOSER (chat only) */
+#composer{position:fixed; left:0; right:0; bottom:64px; padding:10px 14px; display:none; background:linear-gradient(transparent,var(--bg) 40%)}
+#composer.on{display:block}
+.cbox{display:flex; gap:10px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:99px; padding:6px 6px 6px 16px}
+.cbox input{flex:1; border:none; outline:none; font-size:14.5px; background:none; color:var(--txt); padding:8px 0}
+#send{width:40px;height:40px;border-radius:50%;border:none;background:var(--blue);color:#fff;font-size:16px;cursor:pointer;flex-shrink:0}
+/* APPROVAL SHEET */
+#appr{position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:60; display:none; align-items:flex-end}
+#appr.open{display:flex}
+.acard{background:#fff; border-radius:22px 22px 0 0; width:100%; padding:20px 18px 26px}
+.acard h3{font-size:16.5px; margin-bottom:6px; display:flex; gap:9px; align-items:center}
+.acard p{font-size:13.5px; color:#3c4150; margin-bottom:12px; line-height:1.5}
+.acard .cmd{background:#f2f3f6; border-radius:11px; padding:11px 13px; font-size:13px; font-family:monospace; margin-bottom:14px; word-break:break-all}
+.abtn{display:block; width:100%; padding:13px; border-radius:99px; border:none; font-size:14.5px; font-weight:600; cursor:pointer; margin-bottom:9px}
+.abtn.pri{background:var(--blue); color:#fff}
+.abtn.sec{background:#f2f3f6; color:var(--txt)}
 /* MODEL SHEET */
-#sheet{position:fixed; inset:0; background:rgba(4,6,10,.6); backdrop-filter:blur(6px);
-  display:none; align-items:flex-end; justify-content:center; z-index:50}
-#sheet.open{display:flex}
-.card{background:#10141f; border:1px solid var(--line); border-radius:20px 20px 0 0; width:100%;
-  max-width:560px; padding:20px 20px 30px; max-height:75dvh; overflow-y:auto}
-.card h2{font-size:15px; margin-bottom:2px} .card p{font-size:12px; color:var(--dim); margin-bottom:14px}
-.mopt{display:flex; align-items:center; gap:13px; padding:13px; border:1px solid var(--line); border-radius:14px;
-  cursor:pointer; margin-bottom:9px; transition:.15s}
-.mopt:hover{border-color:var(--acc)} .mopt.sel{border-color:var(--acc); background:rgba(124,92,255,.09)}
-.mopt .ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.mopt b{font-size:14px; display:block} .mopt small{font-size:11.5px; color:var(--dim)}
-.mopt .tag{margin-left:auto; font-size:10px; padding:3px 8px; border-radius:99px; flex-shrink:0}
-.tag.on{color:var(--ok); border:1px solid rgba(52,211,153,.35); background:rgba(52,211,153,.08)}
-.tag.dl{color:var(--acc2); border:1px solid rgba(56,189,248,.35); background:rgba(56,189,248,.08)}
-.tag.no{color:var(--dim); border:1px solid var(--line)}
-/* MOBILE */
-#burger{display:none}
-@media(max-width:760px){
-  aside{position:fixed; z-index:40; height:100dvh; transform:translateX(-105%); transition:.25s}
-  aside.open{transform:none}
-  #burger{display:block; background:none; border:1px solid var(--line); color:var(--txt);
-    width:36px;height:36px;border-radius:10px; font-size:16px; cursor:pointer}
-  #chat{padding:20px 5%} #composer{padding:12px 5% 16px}
+#msheet{position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:70; display:none; align-items:flex-end}
+#msheet.open{display:flex}
+.mopt{display:flex; align-items:center; gap:13px; padding:13px; border:1.5px solid var(--line); border-radius:15px; cursor:pointer; margin-bottom:9px; background:#fff}
+.mopt.sel{border-color:var(--blue); background:var(--blue-soft)}
+.mopt .ico{width:40px;height:40px;border-radius:12px;background:var(--blue-soft);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.mopt b{font-size:14px} .mopt small{font-size:12px;color:var(--dim);display:block}
+.mopt .tag{margin-left:auto; font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:99px; flex-shrink:0}
+.tag.on{color:var(--green); background:rgba(24,160,94,.1)}
+.tag.dl{color:var(--blue); background:var(--blue-soft)}
+.tag.no{color:var(--dim); background:#f2f3f6}
+/* DRAWER */
+#drawer{position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:65; display:none}
+#drawer.open{display:block}
+.dpanel{position:absolute; left:0; top:0; bottom:0; width:280px; background:#fff; padding:22px 16px; border-radius:0 22px 22px 0}
+.dpanel h3{font-size:19px; margin-bottom:4px}
+.dpanel .sub{font-size:12px; color:var(--dim); margin-bottom:18px}
+.ditem{padding:12px 10px; border-radius:12px; font-size:14px; cursor:pointer; display:flex; gap:11px; align-items:center}
+.ditem:hover{background:var(--blue-soft)}
+.dfoot{position:absolute; bottom:20px; left:16px; right:16px; font-size:11px; color:var(--dim); border-top:1px solid var(--line); padding-top:12px}
+.dfoot b{color:var(--green)}
+@media(min-width:760px){
+  #phone{max-width:430px; margin:0 auto; height:100dvh; background:var(--bg); position:relative;
+    box-shadow:0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,.12)}
+  nav{left:50%; transform:translateX(-50%); max-width:430px; border-radius:22px 22px 0 0}
+  #composer{left:50%; transform:translateX(-50%); max-width:430px}
 }
 </style>
 </head>
 <body>
-<aside id="side">
-  <div class="logo"><div class="dot">L</div><h1>Loka<small>OFFLINE AI · TERKUNCI</small></h1></div>
-  <button class="newchat" onclick="newChat()">＋ Percakapan baru</button>
-  <div class="sect">Riwayat</div>
-  <div class="hist" id="hist"></div>
-  <div class="foot"><b>● Sandbox aktif</b> — tanpa internet, data tak pernah keluar perangkat</div>
-</aside>
-<main>
-  <header>
-    <button id="burger" onclick="document.getElementById('side').classList.toggle('open')">☰</button>
-    <div class="st"><b id="mName">Loka</b><span style="color:var(--dim);font-size:11.5px">Qwen2.5 · GGUF lokal</span></div>
-    <span class="pill">100% OFFLINE</span>
-    <button id="modelBtn">🧠 <span id="mLabel">tiny</span> ▾</button>
-  </header>
-  <div id="chat"></div>
-  <div id="composer">
-    <div class="cbox">
-      <textarea id="inp" rows="1" placeholder="Tanya apa saja… (tetap offline)"></textarea>
-      <button id="send">➤</button>
-    </div>
+<div id="phone">
+<header>
+  <button class="hbtn" onclick="drawer(1)">☰</button>
+  <div class="avatar-wrap">
+    <div class="avatar" id="av">🐲</div>
+    <small id="aname">Loka</small>
+    <div class="status" id="astat">offline · siap</div>
   </div>
-</main>
-<div id="sheet">
-  <div class="card">
-    <h2>Pilih Model AI</h2>
-    <p>Semua tersimpan lokal di perangkat. Model lebih besar = lebih pintar, butuh RAM lebih.</p>
-    <div id="mlist"></div>
+  <button class="hbtn" onclick="openModels()">⚙︎</button>
+</header>
+
+<div id="pages">
+  <!-- CHAT -->
+  <div class="page on" id="page-chat">
+    <div class="msgs" id="msgs"></div>
+  </div>
+  <!-- FEED -->
+  <div class="page" id="page-feed">
+    <h2>Pagi ini</h2>
+    <div id="feedlist"></div>
+  </div>
+  <!-- IDEAS -->
+  <div class="page" id="page-ideas">
+    <h2>Benak Loka</h2>
+    <div id="idealist"></div>
+  </div>
+  <!-- GOALS -->
+  <div class="page" id="page-goals">
+    <h2>Target</h2>
+    <div class="sect"><span style="color:var(--green)">● Dipantau</span><span class="plus">＋</span></div>
+    <div id="goallist"></div>
+    <div class="sect">Rutinitas <a href="#" onclick="return false">Semua</a><span class="plus">＋</span></div>
+    <div id="routlist"></div>
+  </div>
+  <!-- TOOLS -->
+  <div class="page" id="page-tools">
+    <h2>Alat</h2>
+    <div class="trow"><div class="tico">🧮</div><div><b>Kalkulator</b><small>Hitung aman — ekspresi tertutup</small></div></div>
+    <div class="trow"><div class="tico">📝</div><div><b>Catatan</b><small>Simpan, daftar, baca — di dalam jail</small></div></div>
+    <div class="trow"><div class="tico">📄</div><div><b>Berkas</b><small>Baca/tulis file sandbox</small></div></div>
+    <div class="trow"><div class="tico">🕐</div><div><b>Waktu</b><small>Tanggal & jam perangkat</small></div></div>
+    <div class="trow"><div class="tico">🔋</div><div><b>Baterai</b><small>Status daya HP (Termux API)</small></div></div>
+    <div class="trow" onclick="openModels()" style="cursor:pointer"><div class="tico">🧠</div><div><b>Model AI</b><small>Ganti otak Loka — 4 pilihan</small></div></div>
   </div>
 </div>
+
+<div id="composer">
+  <div class="cbox">
+    <input id="inp" placeholder="Pesan" onkeydown="if(event.key==='Enter')send()">
+    <button id="send" onclick="send()">➤</button>
+  </div>
+</div>
+
+<nav>
+  <button class="on" data-p="chat" onclick="tab('chat',this)">💬</button>
+  <button data-p="feed" onclick="tab('feed',this)">📰</button>
+  <button data-p="ideas" onclick="tab('ideas',this)">💡</button>
+  <button data-p="goals" onclick="tab('goals',this)">✅</button>
+  <button data-p="tools" onclick="tab('tools',this)">🧰</button>
+</nav>
+</div>
+
+<!-- APPROVAL -->
+<div id="appr"><div class="acard">
+  <h3>🗑️ Izinkan Loka menghapus di ruang kerja?</h3>
+  <p>Loka ingin menjalankan perintah yang menghapus berkas. Tinjau dulu ya.</p>
+  <div class="cmd" id="acmd">rm -rf /var/minis/workspace/build-old</div>
+  <button class="abtn pri" onclick="approve('once')">Izinkan sekali</button>
+  <button class="abtn sec" onclick="approve('chat')">Izinkan untuk chat ini</button>
+  <button class="abtn sec" onclick="approve('always')">Selalu izinkan ruang kerja</button>
+  <button class="abtn sec" onclick="approve('deny')">Tolak</button>
+</div></div>
+
+<!-- MODEL SHEET -->
+<div id="msheet"><div class="acard">
+  <h3 style="margin-bottom:2px">Pilih Model AI</h3>
+  <p style="margin-bottom:14px">Semua tersimpan lokal di perangkat. Lebih besar = lebih pintar.</p>
+  <div id="mlist"></div>
+</div></div>
+
+<!-- DRAWER -->
+<div id="drawer"><div class="dpanel">
+  <h3 id="dname">Loka</h3>
+  <div class="sub">Agent pribadi · 100% offline</div>
+  <div class="ditem" onclick="openModels()">🧠 Pilih model</div>
+  <div class="ditem" onclick="tab('tools')">🧰 Alat</div>
+  <div class="ditem" onclick="tab('goals')">✅ Target & rutinitas</div>
+  <div class="ditem" onclick="alert('Skill: '+ (window.__SKILLS||['catatan-cerdas','hitung-laporan']).join(', '))">🧩 Skill terpasang</div>
+  <div class="dfoot"><b>● Sandbox aktif</b> — tanpa internet, data tak pernah keluar perangkat</div>
+</div></div>
+
 <script>
 const MODELS=[
  {key:'tiny',  name:'Qwen 0.5B · Tiny',  size:'491 MB', ram:'RAM 3 GB+', ico:'⚡', d:'Cepat & ringan — HP apa saja'},
@@ -132,50 +221,93 @@ const MODELS=[
  {key:'smart', name:'Qwen 7B · Smart',   size:'4.7 GB', ram:'RAM 8 GB+', ico:'💎', d:'Terpintar — HP flagship'},
 ];
 let model=localStorage.getItem('loka_model')||'tiny';
-let hist=[[]], cur=0, busy=false;
+const FEED=[
+ {ico:'✈️', t:'Tiket pulang kampung mulai dijual', p:'Kereta 10/1 rute Jakarta–Yogyakarta sudah bisa dipesan hari ini. Kursi eksekum menipis — mau kubantu cek jadwal terbaik?', like:1},
+ {ico:'💡', t:'「Rekap mingguan」jadi rutinitas?', p:'Minggu lalu kamu bilang ingin evaluasi rutin. Aku bisa rangkum tiap Jumat 21:00 — catatan, target, dan pengeluaran jadi satu halaman.', like:0},
+ {ico:'📝', t:'USER.md masih kosong', p:'Aku baru tahu kamu dari obrolan. Isi Profil → Tentang kamu, atau tempel catatan dari asisten lamamu lewat menu Impor.', like:1},
+];
+const GOALS=[
+ {t:'Tiket 12306 · 10/1 Jakarta–Yogya', s:'Cek tiap 2 jam · berikutnya 11:44', done:false, prog:'35%'},
+];
+const ROUT=[
+ {t:'Tulis feed pagi', s:'Harian 08:00 · berikutnya besok 08:00', on:true},
+ {t:'Sebelum berangkat pagi', s:'Harian 07:30 · ringkasan cuaca+agenda', on:true},
+];
+const IDEAS=[
+ {t:'Bersihkan folder build lama', p:'Ada 3 folder build >30 hari di ruang kerja. Aku bisa hapus — nanti kutanya dulu sebelum jalan.'},
+ {t:'Pantau harga tiket', p:'Kalau harga turun di bawah Rp 300.000, kuberi tahu lewat feed pagi.'},
+];
 const $=id=>document.getElementById(id);
+function tab(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  $('page-'+name).classList.add('on');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
+  (btn||document.querySelector(`nav button[data-p="${name}"]`)).classList.add('on');
+  $('composer').classList.toggle('on', name==='chat');
+  $('drawer').classList.remove('open');
+}
+function drawer(o){ $('drawer').classList.toggle('open', !!o); }
+function openModels(){ renderModels(); $('msheet').classList.add('open'); }
+$('msheet').onclick=e=>{ if(e.target.id==='msheet') $('msheet').classList.remove('open'); };
+$('drawer').onclick=e=>{ if(e.target.id==='drawer') drawer(0); };
 function renderModels(){
   $('mlist').innerHTML=MODELS.map(m=>{
     const info=window.__MODELS_STATUS?.[m.key]||{};
     const tag=info.downloaded?(m.key===model?'<span class="tag on">AKTIF</span>':'<span class="tag dl">✓ terunduh</span>'):'<span class="tag no">belum unduh</span>';
     return `<div class="mopt ${m.key===model?'sel':''}" onclick="pick('${m.key}')">
-      <div class="ico" style="background:linear-gradient(135deg,rgba(124,92,255,.25),rgba(56,189,248,.2))">${m.ico}</div>
-      <div><b>${m.name}</b><small>${m.size} · ${m.ram} · ${info.downloaded?m.d:'unduh via: /unduh '+m.key}</small></div>${tag}</div>`;
+      <div class="ico">${m.ico}</div><div><b>${m.name}</b><small>${m.size} · ${m.ram} · ${info.downloaded?m.d:'unduh via /unduh '+m.key}</small></div>${tag}</div>`;
   }).join('');
 }
 function pick(k){ model=k; localStorage.setItem('loka_model',k);
   fetch('/api/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:k})}).catch(()=>{});
-  $('mLabel').textContent=k; $('sheet').classList.remove('open'); renderModels(); }
-$('modelBtn').onclick=()=>{renderModels(); $('sheet').classList.add('open')};
-$('sheet').onclick=e=>{if(e.target.id==='sheet')$('sheet').classList.remove('open')};
-function addRow(role,text,typing){
-  const d=document.createElement('div'); d.className='row '+(role==='me'?'me':'ai');
-  d.innerHTML=`<div class="av">${role==='me'?'🧑':'L'}</div><div class="bub">${typing?'<span class="typing"><i></i><i></i><i></i></span>':''}</div>`;
-  if(!typing)d.querySelector('.bub').textContent=text;
-  $('chat').appendChild(d); $('chat').scrollTop=1e9; return d.querySelector('.bub');
+  $('msheet').classList.remove('open'); renderModels(); toast('Model diganti: '+k); }
+function toast(t){ const s=$('astat'); const o=s.textContent; s.textContent=t; setTimeout(()=>s.textContent=o,2000); }
+/* FEED / GOALS / IDEAS render */
+function renderFeed(){
+  $('feedlist').innerHTML=FEED.map((f,i)=>`<div class="fcard">
+    <div class="fhead"><div class="fico">${f.ico}</div><b>${f.t}</b></div>
+    <p>${f.p}</p>
+    <div class="facts"><span class="lk ${f.like?'on':''}" onclick="FEED[${i}].like^=1;renderFeed()">${f.like?'❤':'🤍'}</span>
+    <span>💬 Discuss</span><span style="margin-left:auto">ⓘ</span></div></div>`).join('');
 }
-function newChat(){hist.push([]); cur=hist.length-1; $('chat').innerHTML=''; renderHist();}
-function renderHist(){ $('hist').innerHTML=hist.map((h,i)=>{
-  const t=h[0]?.c||'Kosong'; return `<div class="item" onclick="cur=${i};$('chat').innerHTML='';h.forEach(m=>addRow(m.r,m.c))">${t.slice(0,34)}</div>`}).join('');}
+function renderGoals(){
+  $('goallist').innerHTML=GOALS.map((g,i)=>`<div class="gcard ${g.done?'done':''}" onclick="GOALS[${i}].done=!GOALS[${i}].done;renderGoals()">
+    <div class="chk"></div><div><b>${g.t}</b><small>${g.s} · <span style="color:var(--blue)">${g.prog}</span></small></div></div>`).join('');
+  $('routlist').innerHTML=ROUT.map((r,i)=>`<div class="rrow"><span class="zap">⚡</span>
+    <div><b>${r.t}</b><small>${r.s}</small></div>
+    <div class="switch ${r.on?'on':''}" onclick="event.stopPropagation();ROUT[${i}].on=!ROUT[${i}].on;renderGoals()"><i></i></div></div>`).join('');
+}
+function renderIdeas(){
+  $('idealist').innerHTML=IDEAS.map(i=>`<div class="idea"><b>${i.t}</b>${i.p}
+    <div style="margin-top:9px"><button class="abtn sec" style="width:auto;display:inline-block;padding:8px 16px;font-size:12.5px" onclick="tab('chat');preset('${i.t}')">💬 Tanya Loka</button></div></div>`).join('');
+}
+function preset(t){ $('inp').value=t; $('inp').focus(); }
+/* CHAT */
+let busy=false;
+function add(cls,text){ const d=document.createElement('div'); d.className='msg '+cls; d.textContent=text;
+  $('msgs').appendChild(d); $('msgs').scrollTop=1e9; return d; }
 async function send(){
   if(busy)return; const q=$('inp').value.trim(); if(!q)return;
-  $('inp').value=''; $('inp').style.height='auto'; busy=true; $('send').disabled=true;
-  addRow('me',q); hist[cur].push({r:'me',c:q});
-  const bub=addRow('ai','','typing');
+  $('inp').value=''; busy=true; $('send').disabled=true;
+  add('me',q); const av=$('av'); av.classList.add('think'); $('astat').textContent='sedang berpikir…';
+  const b=add('ai','…');
+  /* demo approval: perintah hapus */
+  if(/hapus|delete|rm /i.test(q)){ setTimeout(()=>{ $('appr').classList.add('open'); },600); }
   try{
     const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'local',messages:hist[cur].filter(m=>m.r).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c})),stream:false})});
-    const j=await r.json(); const ans=j.choices?.[0]?.message?.content||'(kosong)';
-    bub.textContent=ans; hist[cur].push({r:'ai',c:ans});
-  }catch(e){ bub.textContent='⚠ Tidak terhubung ke engine lokal. Jalankan: bash android/run.sh'; }
-  busy=false; $('send').disabled=false; renderHist();
+      body:JSON.stringify({model:'local',messages:[{role:'user',content:q}],stream:false})});
+    const j=await r.json(); b.textContent=j.choices?.[0]?.message?.content||'(kosong)';
+  }catch(e){ b.textContent='⚠ Engine belum jalan. Jalankan: python agent/server.py'; }
+  av.classList.remove('think'); $('astat').textContent='offline · siap';
+  busy=false; $('send').disabled=false;
 }
-$('send').onclick=send;
-$('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-$('inp').addEventListener('input',e=>{e.target.style.height='auto';e.target.style.height=Math.min(130,e.target.scrollHeight)+'px'});
+function approve(v){ $('appr').classList.remove('open');
+  if(v==='deny'){ add('ai','Baik, tidak kujalankan. 👍'); }
+  else add('tool','✓ Disetujui ('+v+') — perintah dijalankan di sandbox'); }
+/* init */
 fetch('/api/models').then(r=>r.json()).then(j=>{window.__MODELS_STATUS=j; renderModels();}).catch(()=>{});
-renderModels(); renderHist();
-if(hist[0].length===0){ addRow('ai','Halo Paduka 👋 Aku Loka — AI-mu yang 100% offline. Semua model tersimpan di HP ini dan tidak ada data yang keluar. Coba tanya sesuatu!'); }
+renderFeed(); renderGoals(); renderIdeas(); renderModels();
+add('ai','Halo! Aku Loka 🐲 — agent pribadimu yang 100% offline. Cek feed pagian, atur target, atau langsung tanya di sini.');
 </script>
 </body>
 </html>
