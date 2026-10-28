@@ -1,0 +1,5 @@
+{
+  "name": "loka-agent",
+  "version": "0.1.0",
+  "description": "Offline AI agent for Android (Termux/proot), fully sandboxed"
+}
