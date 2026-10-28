@@ -14,9 +14,21 @@ def _safe_path(rel):
     return p
 
 # --- kalkulator aman (tanpa eval bebas) ---
-def calc(expression=None, percent=None, value=None, **_):
+def calc(expression=None, percent=None, value=None, total=None, **kw):
+    value = value or total
+    # model kecil kirim nama arg bebas: persen/total/dll — deteksi otomatis
+    if percent is None:
+        for k, v in kw.items():
+            if k.lower().startswith("persen") or k.lower().startswith("percent"):
+                percent = v
+    if value is None:
+        for k, v in kw.items():
+            if k.lower() in ("value", "total", "angka", "dari", "number", "jumlah") or str(v).replace('.','',1).isdigit():
+                value = v; break
     if expression is None and percent is not None and value is not None:
         expression = f"({percent})/100*({value})"
+    if expression is None and value is not None:
+        expression = str(value)
     if expression is None:
         return {"error": "butuh expression, atau percent+value"}
     allowed = {n: getattr(math, n) for n in
