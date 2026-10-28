@@ -53,9 +53,15 @@ def find_tool_json(text):
 def parse_tool_call(text):
     for chunk in find_tool_json(text):
         if '"tool"' in chunk:
-            try: return json.loads(chunk)
-            except Exception:
-                try: return json.loads(re.sub(r",\s*}", "}", chunk).replace("'", '"'))
+            for cand in (chunk,
+                         chunk.replace(")", "}"),
+                         chunk.replace(")", "}").replace(",}", "}"),
+                         re.sub(r",\s*}", "}", chunk).replace("'", '"')):
+                try: return json.loads(cand)
+                except Exception: pass
+            # auto-tutup yang hilang
+            for close in ("}", "}}", "}}}", "])", "}])"):
+                try: return json.loads(chunk + close)
                 except Exception: pass
     return None
 
