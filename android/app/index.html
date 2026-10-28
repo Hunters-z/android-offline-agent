@@ -3,305 +3,179 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Loka — Agent Pribadi Offline</title>
+<title>Loka — AI Offline</title>
 <style>
 :root{
-  --bg:#f2f3f5; --card:#ffffff; --txt:#111214; --dim:#83878f; --line:#e8e9ec;
-  --blue:#2f6bff; --blue-soft:#eef2ff; --green:#1fa356; --red:#e5484d; --red-btn:#eb4d44;
+  --bg:#07090f; --panel:rgba(18,22,34,.72); --panel2:rgba(28,34,50,.6);
+  --line:rgba(120,140,190,.14); --txt:#e8ecf6; --dim:#8b93a8;
+  --acc:#7c5cff; --acc2:#38bdf8; --ok:#34d399; --danger:#f87171;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--txt);font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
-  height:100dvh;display:flex;flex-direction:column;overflow:hidden}
-button{font-family:inherit;cursor:pointer}
-#phone{flex:1;display:flex;flex-direction:column;min-height:0}
-/* HEADER */
-header{position:relative;padding:10px 14px 6px;text-align:center;flex-shrink:0}
-.hbtn{position:absolute;top:12px;width:44px;height:44px;border-radius:50%;border:none;
-  background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.07);font-size:17px;color:var(--txt)}
-.hbtn.l{left:14px}.hbtn.r{right:14px}
-.ava{width:74px;height:74px;border-radius:50%;background:linear-gradient(160deg,#fdeecd,#f9d9c0);
-  display:flex;align-items:center;justify-content:center;font-size:40px;margin:0 auto}
-.aname{font-size:15px;font-weight:600;margin-top:5px}
-.astat{font-size:12.5px;color:var(--blue);margin-top:1px;min-height:16px}
-/* PAGES */
-#pages{flex:1;overflow:hidden;position:relative;min-height:0}
-.page{position:absolute;inset:0;overflow-y:auto;padding:4px 16px 20px;display:none}
-.page.on{display:block}
-h1.big{font-size:27px;font-weight:800;letter-spacing:-.4px;margin:8px 0 4px}
-/* CHAT */
-.msgs{display:flex;flex-direction:column;gap:9px;padding-top:8px}
-.msg{max-width:84%;padding:11px 15px;border-radius:19px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.msg.me{align-self:flex-end;background:#e3e5e9;color:var(--txt);border-bottom-right-radius:7px}
-.msg.ai{align-self:flex-start;background:#fff;border-bottom-left-radius:7px}
-.msg.tool{align-self:center;background:#e9f7ef;color:var(--green);font-size:12.5px;border-radius:11px;padding:7px 13px}
-/* FEED */
-.fcard{background:var(--card);border-radius:16px;padding:15px;margin-bottom:11px}
-.fhead{display:flex;gap:11px;align-items:flex-start;margin-bottom:7px}
-.fico{width:40px;height:40px;border-radius:11px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.ft{font-size:15.5px;font-weight:700;line-height:1.35;padding-top:2px}
-.fp{font-size:14px;color:#4a4e57;line-height:1.55;margin:2px 0 11px}
-.ffoot{display:flex;align-items:center;gap:20px;font-size:13px;color:var(--dim)}
-.lk{cursor:pointer;display:flex;align-items:center;gap:5px}
-.lk.on{color:var(--red)}
-.info{margin-left:auto;opacity:.5}
-/* GOALS */
-.srow{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;margin:14px 0 9px}
-.dotg{width:8px;height:8px;border-radius:50%;background:var(--green)}
-.srow .lnk{color:var(--blue);font-weight:500;font-size:13.5px}
-.srow .plus{margin-left:auto;font-size:20px;color:var(--txt);font-weight:400}
-.gitem{display:flex;gap:12px;align-items:flex-start;padding:13px 4px;border-bottom:1px solid var(--line)}
-.gitem:last-child{border:none}
-.chk{width:20px;height:20px;border:1.8px solid #c4c8cf;border-radius:5px;margin-top:2px;flex-shrink:0;cursor:pointer}
-.gitem.done .chk{background:var(--green);border-color:var(--green)}
-.gitem.done .gt{text-decoration:line-through;color:var(--dim)}
-.gt{font-size:15px;font-weight:700;line-height:1.35}
-.gs{font-size:12.5px;color:var(--dim);margin-top:3px}
-.gs .pc{color:var(--green);font-weight:600}
-.kebab{color:#b3b7bf;font-size:16px;letter-spacing:1px;margin-left:auto;flex-shrink:0;align-self:center}
-.rrow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
-.rrow:last-child{border:none}
-.zap{color:var(--green);font-size:15px}
-.rt{font-size:14.5px;font-weight:700}
-.rs{font-size:12.5px;color:var(--dim);margin-top:2px}
-.sw{margin-left:auto;width:46px;height:28px;border-radius:99px;background:#d9dce1;position:relative;flex-shrink:0;cursor:pointer;transition:.2s}
-.sw.on{background:var(--blue)}
-.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.sw.on i{left:21px}
-.crow{display:flex;align-items:center;gap:13px;padding:13px 4px;border-bottom:1px solid var(--line);font-size:15px;font-weight:600}
-.crow .ci{width:22px;text-align:center;color:var(--txt)}
-.crow .plus{margin-left:auto;color:var(--blue);font-size:19px;font-weight:400}
-/* IDEAS */
-.icard{background:var(--card);border-radius:16px;padding:15px;margin-bottom:11px}
-.it{font-size:15.5px;font-weight:700;margin-bottom:5px}
-.ip{font-size:14px;color:#4a4e57;line-height:1.55}
-/* TOOLS */
-.trow{display:flex;align-items:center;gap:13px;background:var(--card);border-radius:16px;padding:14px 15px;margin-bottom:10px}
-.tico{width:42px;height:42px;border-radius:12px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.tt{font-size:15px;font-weight:700}
-.ts{font-size:12.5px;color:var(--dim);margin-top:2px}
-/* COMPOSER */
-#composer{padding:8px 14px 10px;display:flex;gap:9px;align-items:center;flex-shrink:0}
-#composer.off{display:none}
-.cbox{flex:1;display:flex;align-items:center;gap:10px;background:#e9eaee;border-radius:99px;padding:5px 6px 5px 16px}
-.cbox input{flex:1;border:none;outline:none;font-size:15px;background:none;color:var(--txt);padding:9px 0}
-.cplus{font-size:19px;color:var(--dim)}
-#stop{display:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--red-btn);color:#fff;font-size:15px;flex-shrink:0}
-#send{display:block;width:44px;height:44px;border-radius:50%;border:none;background:var(--blue);color:#fff;font-size:16px;flex-shrink:0}
-#send:disabled{opacity:.45}
-/* NAV */
-nav{height:56px;border-top:1px solid var(--line);background:var(--bg);display:flex;flex-shrink:0}
-nav button{flex:1;background:none;border:none;font-size:21px;color:#9aa0a8}
-nav button.on{color:var(--txt)}
-/* SHEETS */
-.sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:60;display:none;align-items:flex-end;justify-content:center}
-.sheet.open{display:flex}
-.scard{background:#fff;border-radius:22px;width:100%;max-width:430px;padding:22px 18px 26px}
-.scard h3{font-size:18px;font-weight:800;display:flex;gap:11px;align-items:center;margin-bottom:7px}
-.scard h3 .aic{width:38px;height:38px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
-.scard .desc{font-size:14.5px;color:#4a4e57;line-height:1.5;margin-bottom:14px}
-.cmdbox{background:#f4f5f7;border-radius:12px;padding:11px 14px;margin-bottom:16px}
-.cmdbox small{font-size:11.5px;color:var(--dim);display:block;margin-bottom:3px}
-.cmdbox code{font-size:13px;font-family:ui-monospace,Menlo,monospace;color:var(--txt);word-break:break-all}
-.abtn{display:block;width:100%;padding:14px;border-radius:99px;border:none;font-size:15px;font-weight:600;margin-bottom:10px}
-.abtn.pri{background:var(--blue);color:#fff}
-.abtn.sec{background:#fff;color:var(--txt);border:1px solid var(--line)}
-.mopt{display:flex;align-items:center;gap:13px;padding:12px;border-radius:14px;cursor:pointer;margin-bottom:8px;background:#fff;border:1.5px solid var(--line)}
-.mopt.sel{border-color:var(--blue);background:var(--blue-soft)}
-.mopt .ico{width:42px;height:42px;border-radius:12px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.mopt b{font-size:14.5px}
-.mopt small{font-size:12px;color:var(--dim);display:block;margin-top:1px}
-.mopt .tag{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;flex-shrink:0}
-.tag.on{color:var(--green);background:#e7f6ee}
-.tag.dl{color:var(--blue);background:var(--blue-soft)}
-.tag.no{color:var(--dim);background:#f2f3f5}
-/* DRAWER */
-#drawer{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:65;display:none}
-#drawer.open{display:block}
-.dpanel{position:absolute;left:0;top:0;bottom:0;width:280px;background:#fff;padding:26px 14px;border-radius:0 22px 22px 0}
-.dpanel h3{font-size:20px;font-weight:800}
-.dpanel .sub{font-size:12.5px;color:var(--dim);margin:3px 0 20px}
-.ditem{padding:13px 12px;border-radius:13px;font-size:15px;font-weight:500;cursor:pointer;display:flex;gap:12px;align-items:center}
-.ditem:active{background:var(--bg)}
-.dfoot{position:absolute;bottom:22px;left:16px;right:16px;font-size:11.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:14px;line-height:1.5}
-.dfoot b{color:var(--green)}
+body{background:
+  radial-gradient(1000px 500px at 85% -10%, rgba(124,92,255,.16), transparent 60%),
+  radial-gradient(800px 400px at -10% 110%, rgba(56,189,248,.10), transparent 60%),
+  var(--bg);
+  color:var(--txt); font-family:'Segoe UI',system-ui,sans-serif; height:100dvh; display:flex; overflow:hidden}
+/* SIDEBAR */
+aside{width:270px; background:var(--panel); border-right:1px solid var(--line);
+  backdrop-filter:blur(18px); display:flex; flex-direction:column; padding:18px 14px; flex-shrink:0}
+.logo{display:flex; align-items:center; gap:10px; padding:4px 8px 16px}
+.logo .dot{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--acc),var(--acc2));
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+.logo h1{font-size:17px; letter-spacing:.4px}
+.logo small{display:block;color:var(--dim);font-size:10.5px;font-weight:400;letter-spacing:1.5px}
+.newchat{border:1px solid var(--line); background:var(--panel2); color:var(--txt); border-radius:12px;
+  padding:11px; font-size:13.5px; cursor:pointer; margin-bottom:14px}
+.newchat:hover{border-color:var(--acc)}
+.sect{font-size:10px; color:var(--dim); letter-spacing:2px; text-transform:uppercase; padding:6px 8px}
+.hist{flex:1; overflow-y:auto}
+.hist .item{padding:9px 10px; font-size:13px; color:var(--dim); border-radius:9px; cursor:pointer;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hist .item:hover{background:var(--panel2); color:var(--txt)}
+.foot{font-size:10.5px; color:var(--dim); padding:10px 8px 0; border-top:1px solid var(--line)}
+.foot b{color:var(--ok)}
+/* MAIN */
+main{flex:1; display:flex; flex-direction:column; min-width:0}
+header{display:flex; align-items:center; gap:12px; padding:14px 22px; border-bottom:1px solid var(--line);
+  background:rgba(10,13,20,.5); backdrop-filter:blur(14px)}
+header .st{font-size:13px} header .st b{display:block; font-size:14.5px}
+.pill{font-size:10.5px; color:var(--ok); border:1px solid rgba(52,211,153,.3); background:rgba(52,211,153,.08);
+  padding:3px 9px; border-radius:99px}
+#modelBtn{margin-left:auto; display:flex; align-items:center; gap:8px; border:1px solid var(--line);
+  background:var(--panel2); color:var(--txt); padding:8px 14px; border-radius:11px; font-size:13px; cursor:pointer}
+#modelBtn:hover{border-color:var(--acc)}
+#chat{flex:1; overflow-y:auto; padding:26px 6%; display:flex; flex-direction:column; gap:18px}
+.row{display:flex; gap:12px; max-width:780px; width:100%; margin:0 auto}
+.row.me{flex-direction:row-reverse}
+.av{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px}
+.row.ai .av{background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.row.me .av{background:rgba(139,147,168,.18)}
+.bub{padding:13px 16px; border-radius:15px; font-size:14.5px; line-height:1.65; white-space:pre-wrap; word-break:break-word}
+.row.ai .bub{background:var(--panel); border:1px solid var(--line); border-top-left-radius:5px}
+.row.me .bub{background:linear-gradient(135deg,rgba(124,92,255,.28),rgba(56,189,248,.20));
+  border:1px solid rgba(124,92,255,.25); border-top-right-radius:5px}
+.typing{display:inline-flex; gap:4px; padding:4px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--dim);animation:bl 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+#composer{padding:14px 6% 20px}
+.cbox{max-width:780px;margin:0 auto;display:flex;gap:10px;align-items:flex-end;
+  background:var(--panel); border:1px solid var(--line); border-radius:17px; padding:10px 12px; backdrop-filter:blur(16px)}
+.cbox:focus-within{border-color:rgba(124,92,255,.5)}
+textarea{flex:1; background:none; border:none; outline:none; color:var(--txt); font-size:14.5px;
+  resize:none; font-family:inherit; max-height:130px; line-height:1.5; padding:6px 4px}
+#send{width:38px;height:38px;border-radius:11px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--acc),var(--acc2)); color:#fff; font-size:16px; flex-shrink:0}
+#send:disabled{opacity:.4}
+/* MODEL SHEET */
+#sheet{position:fixed; inset:0; background:rgba(4,6,10,.6); backdrop-filter:blur(6px);
+  display:none; align-items:flex-end; justify-content:center; z-index:50}
+#sheet.open{display:flex}
+.card{background:#10141f; border:1px solid var(--line); border-radius:20px 20px 0 0; width:100%;
+  max-width:560px; padding:20px 20px 30px; max-height:75dvh; overflow-y:auto}
+.card h2{font-size:15px; margin-bottom:2px} .card p{font-size:12px; color:var(--dim); margin-bottom:14px}
+.mopt{display:flex; align-items:center; gap:13px; padding:13px; border:1px solid var(--line); border-radius:14px;
+  cursor:pointer; margin-bottom:9px; transition:.15s}
+.mopt:hover{border-color:var(--acc)} .mopt.sel{border-color:var(--acc); background:rgba(124,92,255,.09)}
+.mopt .ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.mopt b{font-size:14px; display:block} .mopt small{font-size:11.5px; color:var(--dim)}
+.mopt .tag{margin-left:auto; font-size:10px; padding:3px 8px; border-radius:99px; flex-shrink:0}
+.tag.on{color:var(--ok); border:1px solid rgba(52,211,153,.35); background:rgba(52,211,153,.08)}
+.tag.dl{color:var(--acc2); border:1px solid rgba(56,189,248,.35); background:rgba(56,189,248,.08)}
+.tag.no{color:var(--dim); border:1px solid var(--line)}
+/* MOBILE */
+#burger{display:none}
+@media(max-width:760px){
+  aside{position:fixed; z-index:40; height:100dvh; transform:translateX(-105%); transition:.25s}
+  aside.open{transform:none}
+  #burger{display:block; background:none; border:1px solid var(--line); color:var(--txt);
+    width:36px;height:36px;border-radius:10px; font-size:16px; cursor:pointer}
+  #chat{padding:20px 5%} #composer{padding:12px 5% 16px}
+}
 </style>
 </head>
 <body>
-<div id="phone">
-<header>
-  <button class="hbtn l" onclick="drawer(1)">☰</button>
-  <div class="ava" id="av">🐲</div>
-  <div class="aname" id="aname">Loka</div>
-  <div class="astat" id="astat">offline · siap</div>
-  <button class="hbtn r" onclick="openModels()">⚙︎</button>
-</header>
-
-<div id="pages">
-  <div class="page on" id="page-chat"><div class="msgs" id="msgs"></div></div>
-
-  <div class="page" id="page-feed">
-    <h1 class="big">Pagi ini</h1>
-    <div id="feedlist"></div>
-  </div>
-
-  <div class="page" id="page-ideas">
-    <h1 class="big">Benak Loka</h1>
-    <div id="idealist" onclick="if(t=event.target.closest('[data-n]')){tab('chat');preset(+t.dataset.n)}"></div>
-  </div>
-
-  <div class="page" id="page-goals">
-    <h1 class="big">Target</h1>
-    <div class="srow"><span class="dotg"></span><span style="color:var(--green)">Dipantau</span><span class="plus">＋</span></div>
-    <div id="goallist"></div>
-    <div class="srow"><span>Rutinitas</span><span class="lnk">Semua rutinitas</span><span class="plus">＋</span></div>
-    <div id="routlist"></div>
-    <div class="srow"><span>Buat target baru</span></div>
-    <div class="icard" style="margin-bottom:0">
-      <div class="ip">Pilih kategori dan ceritakan targetmu — aku susun rencananya dan pantau bersamamu.</div>
-      <div style="margin-top:4px">
-        <div class="crow"><span class="ci">♡</span>Kesehatan<span class="plus">＋</span></div>
-        <div class="crow"><span class="ci">👥</span>Relasi<span class="plus">＋</span></div>
-        <div class="crow"><span class="ci">$</span>Keuangan<span class="plus">＋</span></div>
-        <div class="crow" style="border:none"><span class="ci">💼</span>Karier<span class="plus">＋</span></div>
-      </div>
+<aside id="side">
+  <div class="logo"><div class="dot">L</div><h1>Loka<small>OFFLINE AI · TERKUNCI</small></h1></div>
+  <button class="newchat" onclick="newChat()">＋ Percakapan baru</button>
+  <div class="sect">Riwayat</div>
+  <div class="hist" id="hist"></div>
+  <div class="foot"><b>● Sandbox aktif</b> — tanpa internet, data tak pernah keluar perangkat</div>
+</aside>
+<main>
+  <header>
+    <button id="burger" onclick="document.getElementById('side').classList.toggle('open')">☰</button>
+    <div class="st"><b id="mName">Loka</b><span style="color:var(--dim);font-size:11.5px">Qwen2.5 · GGUF lokal</span></div>
+    <span class="pill">100% OFFLINE</span>
+    <button id="modelBtn">🧠 <span id="mLabel">tiny</span> ▾</button>
+  </header>
+  <div id="chat"></div>
+  <div id="composer">
+    <div class="cbox">
+      <textarea id="inp" rows="1" placeholder="Tanya apa saja… (tetap offline)"></textarea>
+      <button id="send">➤</button>
     </div>
   </div>
-
-  <div class="page" id="page-tools">
-    <h1 class="big">Alat</h1>
-    <div class="trow"><div class="tico">🧮</div><div><div class="tt">Kalkulator</div><div class="ts">Hitung aman — ekspresi tertutup</div></div></div>
-    <div class="trow"><div class="tico">📝</div><div><div class="tt">Catatan</div><div class="ts">Simpan, daftar, baca — di dalam jail</div></div></div>
-    <div class="trow"><div class="tico">📄</div><div><div class="tt">Berkas</div><div class="ts">Baca/tulis file sandbox</div></div></div>
-    <div class="trow"><div class="tico">🕐</div><div><div class="tt">Waktu</div><div class="ts">Tanggal & jam perangkat</div></div></div>
-    <div class="trow"><div class="tico">🔋</div><div><div class="tt">Baterai</div><div class="ts">Status daya HP (Termux API)</div></div></div>
-    <div class="trow" onclick="openModels()" style="cursor:pointer"><div class="tico">🧠</div><div><div class="tt">Model AI</div><div class="ts">Ganti otak Loka — 4 pilihan</div></div></div>
+</main>
+<div id="sheet">
+  <div class="card">
+    <h2>Pilih Model AI</h2>
+    <p>Semua tersimpan lokal di perangkat. Model lebih besar = lebih pintar, butuh RAM lebih.</p>
+    <div id="mlist"></div>
   </div>
 </div>
-
-<div id="composer">
-  <div class="cbox">
-    <span class="cplus">＋</span>
-    <input id="inp" placeholder="Pesan" onkeydown="if(event.key==='Enter')send()">
-  </div>
-  <button id="send" onclick="send()">➤</button>
-  <button id="stop" onclick="stopGen()">■</button>
-</div>
-
-<nav>
-  <button class="on" data-p="chat" onclick="tab('chat',this)">🗨</button>
-  <button data-p="feed" onclick="tab('feed',this)">📰</button>
-  <button data-p="ideas" onclick="tab('ideas',this)">💡</button>
-  <button data-p="goals" onclick="tab('goals',this)">☑</button>
-  <button data-p="tools" onclick="tab('tools',this)">🛠</button>
-</nav>
-</div>
-
-<div id="appr" class="sheet"><div class="scard">
-  <h3><span class="aic">🗑️</span>Izinkan Loka menghapus di ruang kerja?</h3>
-  <div class="desc">Loka ingin menjalankan perintah yang menghapus berkas di ruang kerja. Tinjau dulu ya.</div>
-  <div class="cmdbox"><small>Perintah</small><code id="acmd">rm -rf /var/minis/workspace/build-old</code></div>
-  <button class="abtn pri" onclick="approve('once')">Izinkan sekali</button>
-  <button class="abtn sec" onclick="approve('chat')">Izinkan untuk chat ini</button>
-  <button class="abtn sec" onclick="approve('always')">Selalu izinkan ruang kerja</button>
-  <button class="abtn sec" onclick="approve('deny')">Tolak</button>
-</div></div>
-
-<div id="msheet" class="sheet"><div class="scard">
-  <h3 style="margin-bottom:2px">Pilih Model AI</h3>
-  <div class="desc">Semua tersimpan lokal di perangkat. Lebih besar = lebih pintar.</div>
-  <div id="mlist" onclick="var t=event.target.closest(\'.mopt\');if(t&&t.dataset.k)pick(t.dataset.k)"></div>
-</div></div>
-
-<div id="drawer"><div class="dpanel">
-  <h3 id="dname">Loka</h3>
-  <div class="sub">Agent pribadi · 100% offline</div>
-  <div class="ditem" onclick="openModels()">🧠 Pilih model</div>
-  <div class="ditem" onclick="drawer(0);tab('tools')">🧰 Alat</div>
-  <div class="ditem" onclick="drawer(0);tab('goals')">☑ Target & rutinitas</div>
-  <div class="ditem" onclick="alert('Skill: '+['catatan-cerdas','hitung-laporan'].join(', '))">🧩 Skill terpasang</div>
-  <div class="dfoot"><b>● Sandbox aktif</b> — tanpa internet, data tak pernah keluar perangkat</div>
-</div></div>
-
 <script>
 const MODELS=[
- {key:'tiny',  name:'Qwen 0.5B · Tiny',  size:'491 MB', ram:'RAM 3 GB+', ico:'⚡', d:'Cepat & ringan'},
- {key:'small', name:'Qwen 1.5B · Small', size:'986 MB', ram:'RAM 4 GB+', ico:'🎯', d:'Seimbang — disarankan'},
- {key:'medium',name:'Qwen 3B · Medium',  size:'2 GB',   ram:'RAM 6 GB+', ico:'🧠', d:'Pintar'},
- {key:'smart', name:'Qwen 7B · Smart',   size:'4.7 GB', ram:'RAM 8 GB+', ico:'💎', d:'Terpintar — flagship'},
+ {key:'tiny',  name:'Qwen 0.5B · Tiny',  size:'491 MB', ram:'RAM 3 GB+', ico:'⚡', d:'Cepat & ringan — HP apa saja'},
+ {key:'small', name:'Qwen 1.5B · Small', size:'986 MB', ram:'RAM 4 GB+', ico:'🎯', d:'Seimbang — paling disarankan'},
+ {key:'medium',name:'Qwen 3B · Medium',  size:'2 GB',   ram:'RAM 6 GB+', ico:'🧠', d:'Pintar — HP kelas menengah'},
+ {key:'smart', name:'Qwen 7B · Smart',   size:'4.7 GB', ram:'RAM 8 GB+', ico:'💎', d:'Terpintar — HP flagship'},
 ];
 let model=localStorage.getItem('loka_model')||'tiny';
-let busy=false, aborted=false;
-const FEED=[
- {ico:'🚆', t:'Tiket pulang kampung mulai dijual', p:'Kereta 10/1 rute Jakarta–Yogyakarta bisa dipesan hari ini. Kursi menipis — mau kubantu cek jadwal terbaik?', like:1},
- {ico:'💡', t:'「Rekap mingguan」jadi rutinitas?', p:'Minggu lalu kamu bilang ingin evaluasi rutin. Kutambahkan ke rutinitas: tiap Jumat 21:00 rangkuman catatan + target.', like:0},
- {ico:'📝', t:'Profil kamu masih kosong', p:'Aku baru tahu kamu dari obrolan. Buka drawer → Skill, atau ceritakan kebiasaanmu agar rekomendasiku makin pas.', like:1},
-];
-const GOALS=[{t:'Tiket 10/1 Jakarta–Yogya', s:'Dicek tiap 2 jam · berikutnya 11:44', pc:'35%', done:false}];
-const ROUT=[
- {t:'Tulis feed pagi', s:'Harian 08:00 · berikutnya besok 08:00', on:true},
- {t:'Sebelum berangkat pagi', s:'Harian 07:30 · ringkasan agenda', on:true},
-];
-const IDEAS=[
- {t:'Bersihkan folder build lama', p:'Ada 3 folder build >30 hari di ruang kerja. Aku bisa hapus — nanti kutanya dulu sebelum jalan.'},
- {t:'Pantau harga tiket', p:'Kalau harga turun di bawah Rp 300.000, kuberi tahu lewat feed pagi.'},
-];
+let hist=[[]], cur=0, busy=false;
 const $=id=>document.getElementById(id);
-function tab(name,btn){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  $('page-'+name).classList.add('on');
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
-  (btn||document.querySelector('nav button[data-p="'+name+'"]')).classList.add('on');
-  $('composer').classList.toggle('off', name!=='chat');
-  $('drawer').classList.remove('open');
-}
-function drawer(o){ $('drawer').classList.toggle('open', !!o); }
-$('drawer').onclick=e=>{ if(e.target.id==='drawer') drawer(0); };
-function openModels(){ renderModels(); $('msheet').classList.add('open'); }
-$('msheet').onclick=e=>{ if(e.target.id==='msheet') $('msheet').classList.remove('open'); };
 function renderModels(){
   $('mlist').innerHTML=MODELS.map(m=>{
     const info=window.__MODELS_STATUS?.[m.key]||{};
     const tag=info.downloaded?(m.key===model?'<span class="tag on">AKTIF</span>':'<span class="tag dl">✓ terunduh</span>'):'<span class="tag no">belum unduh</span>';
-    return '<div class="mopt '+(m.key===model?'sel':'')+'" data-k="+m.key+"><div class="ico">'+m.ico+'</div><div><b>'+m.name+'</b><small>'+m.size+' · '+m.ram+' · '+(info.downloaded?m.d:'unduh via /unduh '+m.key)+'</small></div>'+tag+'</div>';
+    return `<div class="mopt ${m.key===model?'sel':''}" onclick="pick('${m.key}')">
+      <div class="ico" style="background:linear-gradient(135deg,rgba(124,92,255,.25),rgba(56,189,248,.2))">${m.ico}</div>
+      <div><b>${m.name}</b><small>${m.size} · ${m.ram} · ${info.downloaded?m.d:'unduh via: /unduh '+m.key}</small></div>${tag}</div>`;
   }).join('');
 }
 function pick(k){ model=k; localStorage.setItem('loka_model',k);
   fetch('/api/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:k})}).catch(()=>{});
-  $('msheet').classList.remove('open'); renderModels(); toast('Model: '+k); }
-function toast(t){ const s=$('astat'), o=s.textContent; s.textContent=t; setTimeout(()=>s.textContent=o,1800); }
-function renderFeed(){
-  $('feedlist').innerHTML=FEED.map((f,i)=>'<div class="fcard"><div class="fhead"><div class="fico">'+f.ico+'</div><div class="ft">'+f.t+'</div></div><div class="fp">'+f.p+'</div><div class="ffoot"><span class="lk '+(f.like?'on':'')+'" onclick="FEED['+i+'].like^=1;renderFeed()">'+(f.like?'❤':'♡')+'</span><span class="lk">🗨 Discuss</span><span class="info">ⓘ</span></div></div>').join('');
+  $('mLabel').textContent=k; $('sheet').classList.remove('open'); renderModels(); }
+$('modelBtn').onclick=()=>{renderModels(); $('sheet').classList.add('open')};
+$('sheet').onclick=e=>{if(e.target.id==='sheet')$('sheet').classList.remove('open')};
+function addRow(role,text,typing){
+  const d=document.createElement('div'); d.className='row '+(role==='me'?'me':'ai');
+  d.innerHTML=`<div class="av">${role==='me'?'🧑':'L'}</div><div class="bub">${typing?'<span class="typing"><i></i><i></i><i></i></span>':''}</div>`;
+  if(!typing)d.querySelector('.bub').textContent=text;
+  $('chat').appendChild(d); $('chat').scrollTop=1e9; return d.querySelector('.bub');
 }
-function renderGoals(){
-  $('goallist').innerHTML=GOALS.map((g,i)=>'<div class="gitem '+(g.done?'done':'')+'" onclick="GOALS['+i+'].done=!GOALS['+i+'].done;renderGoals()"><div class="chk"></div><div style="flex:1"><div class="gt">'+g.t+'</div><div class="gs">'+g.s+' · <span class="pc">'+g.pc+'</span></div></div><span class="kebab">⋮</span></div>').join('');
-  $('routlist').innerHTML=ROUT.map((r,i)=>'<div class="rrow"><span class="zap">⚡</span><div><div class="rt">'+r.t+'</div><div class="rs">'+r.s+'</div></div><div class="sw '+(r.on?'on':'')+'" onclick="ROUT['+i+'].on=!ROUT['+i+'].on;renderGoals()"><i></i></div><span class="kebab">⋮</span></div>').join('');
-}
-function renderIdeas(){
-  $('idealist').innerHTML=IDEAS.map((i,n)=>'<div class="icard"><div class="it">'+i.t+'</div><div class="ip">'+i.p+'</div><div style="margin-top:10px"><button class="abtn sec" style="width:auto;display:inline-block;padding:9px 18px;font-size:13px;margin:0" data-n="'+n+'">Tanya Loka</button></div></div>').join('');
-}
-function preset(n){ $('inp').value=IDEAS[n].t; $('inp').focus(); }
-function add(cls,text){ const d=document.createElement('div'); d.className='msg '+cls; d.textContent=text; $('msgs').appendChild(d); $('msgs').scrollTop=1e9; return d; }
+function newChat(){hist.push([]); cur=hist.length-1; $('chat').innerHTML=''; renderHist();}
+function renderHist(){ $('hist').innerHTML=hist.map((h,i)=>{
+  const t=h[0]?.c||'Kosong'; return `<div class="item" onclick="cur=${i};$('chat').innerHTML='';h.forEach(m=>addRow(m.r,m.c))">${t.slice(0,34)}</div>`}).join('');}
 async function send(){
   if(busy)return; const q=$('inp').value.trim(); if(!q)return;
-  $('inp').value=''; busy=true; aborted=false;
-  $('send').style.display='none'; $('stop').style.display='block';
-  add('me',q); const av=$('av'); $('astat').textContent='sedang bekerja…';
-  const b=add('ai','…');
-  if(/hapus|delete|rm /i.test(q)) setTimeout(()=>{ if(busy) $('appr').classList.add('open'); },700);
+  $('inp').value=''; $('inp').style.height='auto'; busy=true; $('send').disabled=true;
+  addRow('me',q); hist[cur].push({r:'me',c:q});
+  const bub=addRow('ai','','typing');
   try{
     const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'local',messages:[{role:'user',content:q}],stream:false})});
-    const j=await r.json(); b.textContent=aborted?'(dihentikan)':(j.choices?.[0]?.message?.content||'(kosong)');
-  }catch(e){ b.textContent='⚠ Engine belum jalan. Jalankan: python agent/server.py'; }
-  busy=false; $('send').style.display='block'; $('stop').style.display='none'; $('astat').textContent='offline · siap';
+      body:JSON.stringify({model:'local',messages:hist[cur].filter(m=>m.r).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c})),stream:false})});
+    const j=await r.json(); const ans=j.choices?.[0]?.message?.content||'(kosong)';
+    bub.textContent=ans; hist[cur].push({r:'ai',c:ans});
+  }catch(e){ bub.textContent='⚠ Tidak terhubung ke engine lokal. Jalankan: bash android/run.sh'; }
+  busy=false; $('send').disabled=false; renderHist();
 }
-function stopGen(){ aborted=true; toast('dihentikan'); }
-function approve(v){ $('appr').classList.remove('open');
-  if(v==='deny') add('ai','Baik, tidak kujalankan. 👍');
-  else add('tool','✓ Disetujui ('+v+') — dijalankan di sandbox'); }
+$('send').onclick=send;
+$('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+$('inp').addEventListener('input',e=>{e.target.style.height='auto';e.target.style.height=Math.min(130,e.target.scrollHeight)+'px'});
 fetch('/api/models').then(r=>r.json()).then(j=>{window.__MODELS_STATUS=j; renderModels();}).catch(()=>{});
-renderFeed(); renderGoals(); renderIdeas(); renderModels();
-add('ai','Halo! Aku Loka 🐲 — agent pribadimu yang 100% offline. Cek feed pagian, atur target, atau tanya langsung di sini.');
+renderModels(); renderHist();
+if(hist[0].length===0){ addRow('ai','Halo Paduka 👋 Aku Loka — AI-mu yang 100% offline. Semua model tersimpan di HP ini dan tidak ada data yang keluar. Coba tanya sesuatu!'); }
 </script>
 </body>
 </html>
