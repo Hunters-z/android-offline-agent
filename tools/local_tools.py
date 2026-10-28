@@ -14,7 +14,11 @@ def _safe_path(rel):
     return p
 
 # --- kalkulator aman (tanpa eval bebas) ---
-def calc(expression):
+def calc(expression=None, percent=None, value=None, **_):
+    if expression is None and percent is not None and value is not None:
+        expression = f"({percent})/100*({value})"
+    if expression is None:
+        return {"error": "butuh expression, atau percent+value"}
     allowed = {n: getattr(math, n) for n in
         ("sqrt","sin","cos","tan","log","log10","exp","floor","ceil","fabs","pow")}
     allowed.update({"pi": math.pi, "e": math.e, "abs": abs, "round": round, "min": min, "max": max})
