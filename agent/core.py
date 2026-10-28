@@ -37,7 +37,27 @@ def llm():
         _llm = Llama(model_path=MODEL, n_ctx=CTX, n_threads=os.cpu_count(), verbose=False)
     return _llm
 
-TOOL_RE = re.compile(r'\{\s*\"tool\".*?\}', re.S)
+def find_tool_json(text):
+    """Ambil objek JSON tool-call dengan brace seimbang (regex non-greedy terpotong)."""
+    i = text.find('{')
+    while i != -1:
+        depth = 0
+        for j in range(i, len(text)):
+            if text[j] == '{': depth += 1
+            elif text[j] == '}':
+                depth -= 1
+                if depth == 0:
+                    yield text[i:j+1]; break
+        i = text.find('{', i+1)
+
+def parse_tool_call(text):
+    for chunk in find_tool_json(text):
+        if '"tool"' in chunk:
+            try: return json.loads(chunk)
+            except Exception:
+                try: return json.loads(re.sub(r",\s*}", "}", chunk).replace("'", '"'))
+                except Exception: pass
+    return None
 
 def step(history):
     """Satu putaran: generate; jika minta tool → jalankan tool lokal → inject hasil."""
@@ -46,10 +66,9 @@ def step(history):
         max_tokens=300, temperature=0.4,
     )
     text = out["choices"][0]["message"]["content"].strip()
-    m = TOOL_RE.search(text)
-    if m:
+    call = parse_tool_call(text)
+    if call:
         try:
-            call = json.loads(m.group(0))
             name, args = call.get("tool"), call.get("args", {})
             if name not in TOOLS:
                 result = {"error": f"tool '{name}' tidak ada"}
@@ -60,17 +79,8 @@ def step(history):
             return step(history)  # lanjut jawab dengan hasil tool
         except Exception:
             # JSON tool rusak (model kecil sering begitu) — paksa parse permissif
-            try:
-                txt = m.group(0)
-                txt = re.sub(r",\s*}", "}", txt).replace("'", '"')
-                call = json.loads(txt)
-                name, args = call.get("tool"), call.get("args", {})
-                result = TOOLS[name](**args) if name in TOOLS and isinstance(args, dict) else {"error":"tool tidak valid"}
-                history.append({"role":"assistant","content":text})
-                history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
-                return step(history)
-            except Exception:
-                return text  # jawab apa adanya, jangan matikan sesi
+        except Exception:
+            return text  # jawab apa adanya, jangan matikan sesi
     return text
 
 def chat():
