@@ -2,7 +2,9 @@
 proses unduh dijalankan dari Termux di LUAR sandbox agent.)"""
 import json, os
 
-MODELS_FILE = os.path.join(os.environ.get("LOKA_HOME", os.path.expanduser("~/loka")), "models.json")
+_HOME = os.environ.get("LOKA_HOME", os.path.expanduser("~/loka"))
+MODELS_DIR = os.path.join(_HOME, "models")
+MODELS_FILE = os.path.join(MODELS_DIR, "models.json")
 ACTIVE_FILE = os.path.join(os.environ.get("LOKA_HOME", os.path.expanduser("~/loka")), "active_model.txt")
 
 CATALOG = {
@@ -29,7 +31,7 @@ def list_models():
     saved = _load_saved()
     out = []
     for key, m in CATALOG.items():
-        path = os.path.join(os.path.dirname(MODELS_FILE), m["file"])
+        path = os.path.join(MODELS_DIR, m["file"])
         have = os.path.exists(path) and os.path.getsize(path) > 10_000_000
         out.append({"key":key, "name":m["name"], "size_mb":m["size_mb"], "ram":m["ram"],
                     "downloaded":have, "active": get_active()==key})
@@ -38,7 +40,7 @@ def list_models():
 def get_active():
     if os.path.exists(ACTIVE_FILE):
         return open(ACTIVE_FILE).read().strip()
-    return "tiny" if os.path.exists(os.path.join(os.path.dirname(MODELS_FILE), "model-tiny.gguf")) else None
+    return "tiny" if os.path.exists(os.path.join(MODELS_DIR, "model-tiny.gguf")) else None
 
 def set_active(key):
     if key not in CATALOG: raise ValueError(f"model '{key}' tidak ada di katalog")
@@ -47,7 +49,7 @@ def set_active(key):
 
 def model_path(key=None):
     key = key or get_active() or "tiny"
-    return os.path.join(os.path.dirname(MODELS_FILE), CATALOG[key]["file"])
+    return os.path.join(MODELS_DIR, CATALOG[key]["file"])
 
 def download_command(key):
     """Cetak perintah unduh — dijalankan di Termux (luar sandbox), butuh internet."""
