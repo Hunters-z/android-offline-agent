@@ -7,7 +7,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import agent.sandbox  # WAJIB paling awal — blokir network
 from tools.local_tools import TOOLS
 
-MODEL = os.environ.get("LOKA_MODEL", os.path.expanduser("~/loka/models/model-q4.gguf"))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from tools.model_manager import model_path, list_models, set_active, get_active, CATALOG
+from tools import skills as skillmod
+MODEL = os.environ.get("LOKA_MODEL") or model_path()
 CTX = int(os.environ.get("LOKA_CTX", "2048"))
 
 SYSTEM = (
@@ -18,6 +21,12 @@ SYSTEM = (
     "tanpa teks lain. Setelah hasil tool diberikan, jawab pertanyaan user dengan bahasa manusia. "
     "Kamu TIDAK punya akses internet dan tidak boleh mengaku bisa."
 )
+
+def reload_system_prompt(user_text=""):
+    base = SYSTEM
+    rel = skillmod.load_relevant(user_text)
+    if rel: base += "\n\n[SKILL AKTIF — ikuti petunjuk ini]\n" + rel
+    return base
 
 _llm = None
 def llm():
@@ -33,7 +42,7 @@ TOOL_RE = re.compile(r'\{\s*\"tool\".*?\}', re.S)
 def step(history):
     """Satu putaran: generate; jika minta tool → jalankan tool lokal → inject hasil."""
     out = llm().create_chat_completion(
-        messages=[{"role":"system","content":SYSTEM}] + history,
+        messages=[{"role":"system","content":reload_system_prompt(history[-1]["content"] if history else "")}] + history,
         max_tokens=300, temperature=0.4,
     )
     text = out["choices"][0]["message"]["content"].strip()
@@ -64,6 +73,21 @@ def chat():
         if not q: continue
         if q in ("/exit","/quit"): break
         if q == "/tools": print(", ".join(TOOLS)); continue
+        if q == "/model":
+            for m in list_models():
+                mark = "◀ aktif" if m["active"] else ("✓ ada" if m["downloaded"] else "belum unduh")
+                print(f"  {m['key']:8s} {m['name']:28s} {m['size_mb']}MB  RAM {m['ram']}  {mark}")
+            print("Ganti: /model <key>")
+            continue
+        if q.startswith("/model "):
+            key = q.split()[1]
+            try:
+                r = set_active(key); print(f"Model aktif: {r['name']} (restart untuk memuat)")
+            except ValueError as e: print(e)
+            continue
+        if q == "/skills": print(", ".join(skillmod.list_skills()) or "(kosong)"); continue
+        if q.startswith("/skill "):
+            print(skillmod.read_skill(q.split()[1]).get("content","?")); continue
         history.append({"role":"user","content":q})
         try:
             a = step(history)
