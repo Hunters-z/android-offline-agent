@@ -10,10 +10,29 @@ _blocked_msg = "[SANDBOX] Akses network diblokir. Agent ini offline-total."
 def _blocked(*a, **k):
     raise OSError(_blocked_msg)
 
-# 1) Socket: netralisir total
-socket.socket = _blocked
+# 1) Socket: blokir network LUAR, izinkan loopback 127.0.0.1 (UI lokal tetap jalan)
+import _socket as _csock
+_LOOPBACK = ("127.0.0.1", "localhost", "::1", "0.0.0.0")
+
+class _GuardedSocket(socket.socket):
+    def connect(self, address):
+        host = address[0] if isinstance(address, (tuple, list)) else str(address)
+        if host in _LOOPBACK or str(host).startswith("127."):
+            return super().connect(address)
+        raise OSError(_blocked_msg)
+    def connect_ex(self, address):
+        host = address[0] if isinstance(address, (tuple, list)) else str(address)
+        if host in _LOOPBACK or str(host).startswith("127."):
+            return super().connect_ex(address)
+        raise OSError(_blocked_msg)
+
+socket.socket = _GuardedSocket
 socket.create_connection = _blocked
-socket.getaddrinfo = _blocked
+def _guard_getaddrinfo(host, *a, **k):
+    if str(host) not in _LOOPBACK and not str(host).startswith("127."):
+        raise OSError(_blocked_msg)
+    return _csock.getaddrinfo(host, *a, **k)
+socket.getaddrinfo = _guard_getaddrinfo
 socket.gethostbyname = _blocked
 
 # 2) urllib/requests/httpx/urllib3 → gagal sebelum connect (socket sudah mati),
