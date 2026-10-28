@@ -76,7 +76,7 @@ def step(history):
     """Satu putaran: generate; jika minta tool → jalankan tool lokal → inject hasil."""
     out = llm().create_chat_completion(
         messages=[{"role":"system","content":reload_system_prompt(history[-1]["content"] if history else "")}] + history,
-        max_tokens=300, temperature=0.4,
+        max_tokens=500, temperature=0.4,
     )
     text = out["choices"][0]["message"]["content"].strip()
     call = parse_tool_call(text)
