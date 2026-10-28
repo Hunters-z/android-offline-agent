@@ -28,7 +28,9 @@ def calc(expression=None, percent=None, value=None, **_):
         return {"error": str(e)}
 
 # --- catatan (notes) ---
-def note_save(title, body):
+def note_save(title=None, body=None, judul=None, isi=None, content=None, **_):
+    title = title or judul
+    body = body or isi or content
     p = _safe_path("notes")
     os.makedirs(p, exist_ok=True)
     fn = os.path.join(p, f"{int(time.time())}_{title.replace(' ','_')[:40]}.md")
