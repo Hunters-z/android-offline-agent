@@ -37,3 +37,16 @@ Ganti: `LOKA_MODEL=~/loka/models/model lain.gguf bash android/run.sh`
 Model lebih kecil (0.5B) untuk HP kentang; model 3B untuk HP 8 GB+.
 
 MIT
+
+
+## Pilihan Model
+Katalog 4 model Qwen2.5 (GGUF Q4_K_M). Di dalam Loka:
+- `/model` - daftar model (tiny 0.5B/491MB, small 1.5B/986MB, medium 3B/2GB, smart 7B/4.7GB)
+- `/model small` - ganti model aktif (unduh dulu via perintah yang dicetak setup)
+
+## Sistem Skill
+Skill = file Markdown di `~/loka/skills/`. Agent memuat otomatis skill yang relevan (berdasar kata kunci) ke konteks - semuanya offline.
+- `/skills` - daftar skill terpasang
+- `/skill <nama>` - baca isi skill
+- Tambah skill sendiri: buat file `.md` dengan baris `Keywords: kata, kunci, ...`
+- Bawaan: catatan-cerdas, hitung-laporan
