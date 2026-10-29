@@ -88,10 +88,11 @@ def _install_skill_from_github(url):
     url = url.replace("https://github.com/", "").replace("http://github.com/", "")
     url = url.replace("https://raw.githubusercontent.com/", "")
     # raw URL langsung
-    if "/" in url and url.split("/")[2] == "refs":  # raw/refs/heads/...
-        parts = url.split("/"); branch = parts[3]; path = "/".join(parts[4:])
+    parts_all = url.strip("/").split("/")
+    if len(parts_all) >= 4 and parts_all[2] == "refs":  # raw/refs/heads/...
+        parts = parts_all; branch = parts[3]; path = "/".join(parts[4:])
     else:
-        parts = url.strip("/").split("/")
+        parts = parts_all
     # github.com/user/repo/tree/branch/path
     if len(parts) >= 5 and parts[2] in ("tree","blob"):
         user, repo, kind, branch = parts[0], parts[1], parts[2], parts[3]
@@ -99,10 +100,12 @@ def _install_skill_from_github(url):
     elif len(parts) >= 4 and parts[2] == "raw":  # raw.githubusercontent style user/repo/branch/path? jarang
         user, repo, branch = parts[0], parts[1], parts[2]
         path = "/".join(parts[3:])
-    else:
+    elif len(parts) >= 2:
         user, repo = parts[0], parts[1]
         branch = "main"
         path = "/".join(parts[2:]) if len(parts) > 2 else ""
+    else:
+        raise ValueError("URL tidak dikenali — pakai URL folder/file di github.com")
     base_raw = "https://raw.githubusercontent.com/%s/%s/%s" % (user, repo, branch)
 
     def fetch(p):
@@ -128,8 +131,9 @@ def _install_skill_from_github(url):
         except Exception:
             # fallback: coba README.md
             files[name or "skill"] = fetch(path.rstrip("/") + "/README.md")
-        # file .md tambahan dalam folder (via GitHub API)
-        try:
+        # file .md tambahan dalam folder (via GitHub API) — hanya utk subfolder, bukan root repo
+        if path:
+          try:
             api = "https://api.github.com/repos/%s/%s/contents/%s?ref=%s" % (user, repo, path, branch)
             try:
                 import agent.sandbox as _sb; _sb.allow_host("api.github.com")
@@ -142,7 +146,7 @@ def _install_skill_from_github(url):
                 if it.get("type")=="file" and it.get("name","").endswith(".md") and it["name"]!="SKILL.md" and it["name"]!="README.md" and len(files)<8:
                     try: files[it["name"][:-3]] = fetch(path.rstrip("/") + "/" + it["name"])
                     except Exception: pass
-        except Exception: pass
+          except Exception: pass
     if not files:
         raise ValueError("tidak menemukan SKILL.md / file markdown di URL itu")
     sk_dir = os.path.join(HOME, "skills")
@@ -403,7 +407,7 @@ def agent_loop_run(msgs):
     """Agent loop generik module-level: otak sesuai mode (API/lokal), tools lokal, approval."""
     st = load_settings()
     use_api = st.get("mode") in ("cloud","hybrid") and st.get("api_key") and st.get("base_url")
-    history = list(msgs)
+    history = [m for m in msgs if m.get("role") != "system"]  # hardening: system eksternal dibuang — hanya system prompt Loka
     out = None
     for _ in range(6):
         sys_msg = {"role":"system","content":reload_system_prompt(history[-1]["content"] if history else "")}
