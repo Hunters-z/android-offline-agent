@@ -1,4 +1,4 @@
-import re
+import re, os
 """
 Tool lokal agent — semua berjalan offline di dalam container.
 Agent hanya boleh memanggil tool di daftar ini (whitelist).
@@ -110,3 +110,58 @@ TOOLS = {
     "note_read": note_read, "file_write": file_write, "file_read": file_read,
     "file_list": file_list, "now": now, "battery": battery,
 }
+
+
+# ================= MEMORY PERSISTEN =================
+# Catatan agent tentang user — selalu diinjeksi ke system prompt setiap sesi (ala Hermes MEMORY.md)
+_HOME = os.environ.get("LOKA_HOME", os.path.expanduser("~/loka"))
+MEM_FILE = os.path.join(_HOME, "memory.md")
+
+def _mem_lines():
+    try:
+        with open(MEM_FILE) as f:
+            return [l.rstrip("\n") for l in f if l.strip()]
+    except FileNotFoundError:
+        return []
+
+def mem_save(content=None, **kw):
+    """Tambah fakta permanen tentang user. Dipanggil agent saat menemukan info penting."""
+    if not content:
+        # alias arg bebas
+        for k, v in kw.items():
+            if isinstance(v, str) and v.strip():
+                content = v; break
+    if not content:
+        return {"error": "butuh content"}
+    lines = _mem_lines()
+    if content.strip() in "\n".join(lines):  # dedupe
+        return {"ok": True, "note": "sudah ada"}
+    lines.append(content.strip())
+    # batas 30 baris — buang tertua
+    if len(lines) > 30:
+        lines = lines[-30:]
+    os.makedirs(_HOME, exist_ok=True)
+    with open(MEM_FILE, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    return {"ok": True, "total": len(lines)}
+
+def mem_list(**kw):
+    lines = _mem_lines()
+    return {"count": len(lines), "items": lines}
+
+def mem_forget(content=None, **kw):
+    """Hapus fakta yang memuat substring content."""
+    if not content:
+        for k, v in kw.items():
+            if isinstance(v, str) and v.strip(): content = v; break
+    if not content: return {"error": "butuh content"}
+    lines = [l for l in _mem_lines() if content.lower() not in l.lower()]
+    with open(MEM_FILE, "w") as f:
+        f.write("\n".join(lines) + ("\n" if lines else ""))
+    return {"ok": True, "sisa": len(lines)}
+
+TOOLS.update({
+    "mem_save": mem_save,
+    "mem_list": mem_list,
+    "mem_forget": mem_forget,
+})

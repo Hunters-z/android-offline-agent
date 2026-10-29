@@ -16,14 +16,28 @@ CTX = int(os.environ.get("LOKA_CTX", "2048"))
 SYSTEM = (
     "Kamu adalah Loka, asisten AI offline berbahasa Indonesia yang berjalan di ponsel pengguna. "
     "Jawab ringkas dan langsung. Kamu punya tool lokal: calc, note_save, note_list, note_read, "
-    "file_write, file_read, file_list, now, battery. "
+    "file_write, file_read, file_list, now, battery, mem_save, mem_list, mem_forget. "
+    "Gunakan mem_save untuk menyimpan fakta penting tentang pengguna (nama, kebiasaan, preferensi, proyek) "
+    "saat pengguna menyebutkannya — sekali saja, ringkas satu kalimat. "
     "Jika perlu tool, jawab HANYA satu baris JSON: {\"tool\": \"nama\", \"args\": {...}} "
     "tanpa teks lain. Setelah hasil tool diberikan, jawab pertanyaan user dengan bahasa manusia. "
     "Kamu TIDAK punya akses internet dan tidak boleh mengaku bisa."
 )
 
+MEMORY_FILE = os.path.join(os.environ.get("LOKA_HOME", os.path.expanduser("~/loka")), "memory.md")
+
+def load_memory():
+    try:
+        with open(MEMORY_FILE) as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ""
+
 def reload_system_prompt(user_text=""):
     base = SYSTEM
+    mem = load_memory()
+    if mem:
+        base += "\n\n[INGATAN TENTANG PENGGUNA - selalu berlaku]\n" + mem
     rel = skillmod.load_relevant(user_text)
     if rel: base += "\n\n[SKILL AKTIF — ikuti petunjuk ini]\n" + rel
     return base
