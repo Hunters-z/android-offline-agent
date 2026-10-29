@@ -424,7 +424,7 @@ async function loadCron(){
 async function loadSkills(){
   const j=await (await fetch('/api/skills')).json();
   document.getElementById('skList').innerHTML=(j.items||[]).map(it=>
-    '<div class="cronrow"><div style="flex:1"><b>'+esc(it.name)+'</b><small>'+esc(it.desc)+'</small></div><button onclick="editSkill(\''+it.name+'\')" style="border:none;background:none;color:var(--acc);cursor:pointer;font-size:12px;font-weight:600">Edit</button><button onclick="delSkill(\''+it.name+'\')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:12px;font-weight:600">Hapus</button></div>').join('') || '<p style="text-align:center;color:#8a92a0;font-size:13px;margin-top:40px">Belum ada skill</p>';
+    '<div class="cronrow"><div style="flex:1"><b>'+esc(it.name)+'</b><small>'+esc(it.desc)+'</small></div><button onclick="delSkill(\''+it.name+'\')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:12px;font-weight:600">Hapus</button></div>').join('') || '<p style="text-align:center;color:#8a92a0;font-size:13px;margin-top:40px">Belum ada skill</p>';
 }
 async function installSkill(){
   const url=document.getElementById('skUrl').value.trim();
@@ -437,19 +437,6 @@ async function installSkill(){
     if(j.ok){ st.textContent='Ter-install: '+(j.installed||[]).join(', '); document.getElementById('skUrl').value=''; loadSkills(); }
     else st.textContent='Gagal: '+(j.error||'gagal');
   }catch(e){ st.textContent='Gagal: '+e.message; }
-}
-async function saveSkill(){
-  const name=document.getElementById('skName').value.trim();
-  const content=document.getElementById('skContent').value.trim();
-  if(!name||!content) return;
-  await fetch('/api/skills/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,content:content})});
-  document.getElementById('skName').value=''; document.getElementById('skContent').value='';
-  loadSkills();
-}
-async function editSkill(n){
-  const j=await (await fetch('/api/skills/read/'+n)).json();
-  document.getElementById('skName').value=j.name; document.getElementById('skContent').value=j.content||'';
-  document.getElementById('skillsView').scrollTo({top:0,behavior:'smooth'});
 }
 async function delSkill(n){ await fetch('/api/skills/del/'+n,{method:'POST'}); loadSkills(); }
 async function delCron(id){ await fetch('/api/cron/del/'+id,{method:'POST'}); loadCron(); }
@@ -473,10 +460,6 @@ async function addCron(){
       <button onclick="installSkill()" style="padding:10px 14px;border:none;border-radius:10px;background:var(--acc);color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap">Install</button>
     </div>
     <div id="skInstallStatus" style="font-size:11.5px;color:var(--dim);margin-bottom:10px;min-height:14px"></div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:#8a92a0;font-weight:700">ATAU BUAT MANUAL</span><div style="flex:1;height:1px;background:var(--line)"></div></div>
-    <input id="skName" placeholder="Nama skill (mis. resep-masak)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px;font-size:13px">
-    <textarea id="skContent" placeholder="Isi skill (markdown). Baris pertama = deskripsi. Loka memuat skill otomatis saat relevan." style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px;font-size:13px;min-height:80px;resize:vertical;font-family:ui-monospace,monospace"></textarea>
-    <button onclick="saveSkill()" style="width:100%;padding:10px;border:none;border-radius:10px;background:var(--acc);color:#fff;font-weight:700;font-size:13px;cursor:pointer">Simpan Skill</button>
   </div>
   <div id="skList"></div>
 </div>

@@ -254,11 +254,6 @@ class H(SimpleHTTPRequestHandler):
                     items.append({"name": os.path.basename(f)[:-3], "desc": desc, "size": len(c)})
                 except Exception: pass
             return self._json({"items": items})
-        if self.path.startswith("/api/skills/read/"):
-            name = self.path.rsplit("/",1)[-1]
-            fp = os.path.join(HOME, "skills", name + ".md")
-            try: return self._json({"name": name, "content": open(fp).read()})
-            except Exception: return self._json({"error":"tidak ada"}, 404)
         if self.path == "/api/pending":
             import glob
             reqs = []
@@ -316,14 +311,6 @@ class H(SimpleHTTPRequestHandler):
                     items = [json.loads(l) for l in f if l.strip()]
             except FileNotFoundError: pass
             return self._json({"items": items[-20:][::-1]})
-        if self.path == "/api/skills/save":
-            name = "".join(ch for ch in (body.get("name","") or "skill") if ch.isalnum() or ch in "-_ ").strip().replace(" ","-") or "skill"
-            content = body.get("content","").strip()
-            if not content: return self._json({"error":"konten kosong"}, 400)
-            os.makedirs(os.path.join(HOME, "skills"), exist_ok=True)
-            with open(os.path.join(HOME, "skills", name + ".md"), "w") as f:
-                f.write(content)
-            return self._json({"ok": True, "name": name})
         if self.path.startswith("/api/skills/del/"):
             name = self.path.rsplit("/",1)[-1]
             try: os.remove(os.path.join(HOME, "skills", name + ".md"))
