@@ -165,3 +165,79 @@ TOOLS.update({
     "mem_list": mem_list,
     "mem_forget": mem_forget,
 })
+
+# ================= SHELL TERBATAS (project di perangkat) =================
+# Folder project: LOKA_HOME/projects/<nama>. Agent tidak bisa keluar dari situ.
+# Perintah di-allowlist ketat; eksekusi WAJIB lewat approval sheet (bukan SAFE_TOOLS).
+PROJECTS_ROOT = os.path.join(SAFE_ROOT, "projects")
+SHELL_BINARIES = {
+    "git":   ["git"],
+    "node":  ["node"],
+    "npm":   ["npm", "npx"],
+    "python":["python3"],
+    "ls":    ["ls", "cat", "head", "tail", "wc", "grep", "find", "du"],
+    "text":  ["sed", "awk", "sort", "uniq", "cut", "tr", "diff", "touch", "mkdir", "cp", "mv"],
+}
+SHELL_MAX_OUT = 4000
+
+def _project_dir(name=None):
+    os.makedirs(PROJECTS_ROOT, exist_ok=True)
+    if not name:
+        # kalau hanya ada satu project, pakai itu
+        subs = [d for d in os.listdir(PROJECTS_ROOT) if os.path.isdir(os.path.join(PROJECTS_ROOT, d))]
+        if len(subs) == 1: name = subs[0]
+        else: return None, subs
+    pd = os.path.realpath(os.path.join(PROJECTS_ROOT, name))
+    if not pd.startswith(os.path.realpath(PROJECTS_ROOT)):
+        raise ValueError("Nama project tidak valid")
+    return pd, None
+
+def shell(command=None, project=None, **kw):
+    """Jalankan perintah terbatas di folder project di perangkat.
+    Hanya binary allowlist; wajib approval user (tool berisiko)."""
+    if not command or not isinstance(command, str):
+        return {"error": "butuh command"}
+    import shlex
+    try:
+        parts = shlex.split(command)
+    except ValueError as e:
+        return {"error": "command tidak bisa diparse: %s" % e}
+    if not parts:
+        return {"error": "command kosong"}
+    # pipe/redirect/metachar dilarang — satu perintah sederhana saja
+    if any(ch in command for ch in "|;&`$><\n"):
+        return {"error": "hanya perintah tunggal tanpa |;&`$>< (pecah jadi beberapa panggilan shell)"}
+    bin0 = parts[0]
+    allowed = any(bin0 in alts or bin0 == a for alts in SHELL_BINARIES.values() for a in alts)
+    if not allowed:
+        return {"error": "perintah '%s' tidak di-allowlist. Boleh: git, node, npm, npx, python3, ls, cat, head, tail, grep, find, sed, awk, mkdir, cp, mv, touch, diff, wc, du" % bin0}
+    # hardening: larang path absolut & traversal keluar project
+    for tok in parts[1:]:
+        if tok.startswith("/"):
+            return {"error": "path absolut tidak diizinkan — pakai path relatif dalam project"}
+    pd, subs = _project_dir(project)
+    if pd is None:
+        return {"error": "pilih project. Project tersedia: %s (buat via file_write di projects/<nama>/...)" % ", ".join(subs) if subs else "belum ada project — buat via file_write di projects/<nama>/..."}
+    if not os.path.isdir(pd):
+        return {"error": "project tidak ditemukan: %s" % pd}
+    for tok in parts[1:]:
+        if "/" in tok:
+            rp = os.path.realpath(os.path.join(pd, tok))
+            if not rp.startswith(pd + os.sep) and rp != pd:
+                return {"error": "path keluar dari folder project: %s" % tok}
+    try:
+        import subprocess as _sp
+        r = _sp.run(parts, cwd=pd, capture_output=True, text=True, timeout=30,
+                    env={**os.environ, "HOME": pd, "PATH": os.environ.get("PATH", "/usr/bin:/bin")})
+        out = (r.stdout or "")[:SHELL_MAX_OUT]
+        err = (r.stderr or "")[:1500]
+        return {"ok": True, "exit": r.returncode, "cwd": os.path.basename(pd),
+                "stdout": out, "stderr": err, "terpotong": len(r.stdout or "") > SHELL_MAX_OUT}
+    except _sp.TimeoutExpired:
+        return {"error": "timeout 30 detik"}
+    except FileNotFoundError:
+        return {"error": "binary tidak ada di perangkat: %s" % bin0}
+
+TOOLS.update({
+    "shell": shell,
+})
