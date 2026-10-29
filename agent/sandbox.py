@@ -15,14 +15,16 @@ import _socket as _csock
 _LOOPBACK = ("127.0.0.1", "localhost", "::1", "0.0.0.0")
 
 class _GuardedSocket(socket.socket):
+    def _ok(self, host):
+        return host in _LOOPBACK or str(host).startswith("127.") or str(host) in ALLOWED_HOSTS or str(host) in _ALLOWED_IPS
     def connect(self, address):
         host = address[0] if isinstance(address, (tuple, list)) else str(address)
-        if host in _LOOPBACK or str(host).startswith("127."):
+        if self._ok(host):
             return super().connect(address)
         raise OSError(_blocked_msg)
     def connect_ex(self, address):
         host = address[0] if isinstance(address, (tuple, list)) else str(address)
-        if host in _LOOPBACK or str(host).startswith("127."):
+        if self._ok(host):
             return super().connect_ex(address)
         raise OSError(_blocked_msg)
 
@@ -30,13 +32,19 @@ socket.socket = _GuardedSocket
 _orig_create_connection = socket.create_connection
 def _guard_create_connection(address, *a, **k):
     host = address[0] if isinstance(address, (tuple, list)) else str(address)
-    if host in _LOOPBACK or str(host).startswith("127.") or str(host) in ALLOWED_HOSTS:
+    if host in _LOOPBACK or str(host).startswith("127.") or str(host) in ALLOWED_HOSTS or str(host) in _ALLOWED_IPS:
         return _orig_create_connection(address, *a, **k)
     raise OSError(_blocked_msg)
 socket.create_connection = _guard_create_connection
 # host API yang diizinkan saat mode cloud (diatur runtime oleh server.py)
 ALLOWED_HOSTS = set()
-def allow_host(h): ALLOWED_HOSTS.add(str(h))
+_ALLOWED_IPS = set()
+def allow_host(h):
+    h = str(h); ALLOWED_HOSTS.add(h)
+    try:
+        for info in _csock.getaddrinfo(h, None):
+            _ALLOWED_IPS.add(info[4][0])
+    except Exception: pass
 
 def _guard_getaddrinfo(host, *a, **k):
     h = str(host)

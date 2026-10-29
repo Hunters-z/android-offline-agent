@@ -79,6 +79,84 @@ def llm():
         _loaded_key = key
     return _llm
 
+
+# ============ SKILL INSTALL DARI GITHUB ============
+def _install_skill_from_github(url):
+    """Install skill dari URL GitHub (folder berisi SKILL.md atau file .md langsung).
+       Format: github.com/user/repo/tree/branch/path  |  .../blob/.../SKILL.md  |  raw URL"""
+    import urllib.request as _ur
+    url = url.replace("https://github.com/", "").replace("http://github.com/", "")
+    url = url.replace("https://raw.githubusercontent.com/", "")
+    # raw URL langsung
+    if "/" in url and url.split("/")[2] == "refs":  # raw/refs/heads/...
+        parts = url.split("/"); branch = parts[3]; path = "/".join(parts[4:])
+    else:
+        parts = url.strip("/").split("/")
+    # github.com/user/repo/tree/branch/path
+    if len(parts) >= 5 and parts[2] in ("tree","blob"):
+        user, repo, kind, branch = parts[0], parts[1], parts[2], parts[3]
+        path = "/".join(parts[4:])
+    elif len(parts) >= 4 and parts[2] == "raw":  # raw.githubusercontent style user/repo/branch/path? jarang
+        user, repo, branch = parts[0], parts[1], parts[2]
+        path = "/".join(parts[3:])
+    else:
+        user, repo = parts[0], parts[1]
+        branch = "main"
+        path = "/".join(parts[2:]) if len(parts) > 2 else ""
+    base_raw = "https://raw.githubusercontent.com/%s/%s/%s" % (user, repo, branch)
+
+    def fetch(p):
+        req = _ur.Request(base_raw + "/" + p, headers={"User-Agent":"loka-agent"})
+        with _ur.urlopen(req, timeout=20) as r:
+            return r.read().decode("utf-8", "replace")
+
+    # izinkan host github di sandbox
+    try:
+        import agent.sandbox as _sb; _sb.allow_host("raw.githubusercontent.com")
+    except Exception: pass
+
+    name = path.rstrip("/").split("/")[-1] if path else repo
+    files = {}
+    # kasus 1: path menuju file .md langsung
+    if path.endswith(".md"):
+        files[name[:-3] if name.endswith(".md") else name] = fetch(path)
+    else:
+        # kasus 2: folder — coba SKILL.md dulu, lalu ambil .md lain via API listing
+        try:
+            files["SKILL"] = fetch(path.rstrip("/") + "/SKILL.md")
+            name = path.rstrip("/").split("/")[-1]
+        except Exception:
+            # fallback: coba README.md
+            files[name or "skill"] = fetch(path.rstrip("/") + "/README.md")
+        # file .md tambahan dalam folder (via GitHub API)
+        try:
+            api = "https://api.github.com/repos/%s/%s/contents/%s?ref=%s" % (user, repo, path, branch)
+            try:
+                import agent.sandbox as _sb; _sb.allow_host("api.github.com")
+            except Exception: pass
+            req = _ur.Request(api, headers={"User-Agent":"loka-agent"})
+            with _ur.urlopen(req, timeout=20) as r:
+                import json as _j
+                listing = _j.loads(r.read())
+            for it in listing:
+                if it.get("type")=="file" and it.get("name","").endswith(".md") and it["name"]!="SKILL.md" and it["name"]!="README.md" and len(files)<8:
+                    try: files[it["name"][:-3]] = fetch(path.rstrip("/") + "/" + it["name"])
+                    except Exception: pass
+        except Exception: pass
+    if not files:
+        raise ValueError("tidak menemukan SKILL.md / file markdown di URL itu")
+    sk_dir = os.path.join(HOME, "skills")
+    os.makedirs(sk_dir, exist_ok=True)
+    # nama folder skill = nama utama
+    main = "SKILL" if "SKILL" in files else list(files)[0]
+    installed = []
+    for fn, content in files.items():
+        fname = ("%s__%s" % (name, fn)) if len(files) > 1 else name
+        with open(os.path.join(sk_dir, fname + ".md"), "w") as f:
+            f.write(content)
+        installed.append(fname)
+    return {"ok": True, "installed": installed, "count": len(installed)}
+
 class H(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw): super().__init__(*a, directory=APP_DIR, **kw)
     def log_message(self, *a): pass
@@ -168,7 +246,12 @@ class H(SimpleHTTPRequestHandler):
             for f in sorted(_g.glob(os.path.join(sk_dir, "*.md"))):
                 try:
                     c = open(f).read().strip()
-                    items.append({"name": os.path.basename(f)[:-3], "desc": c.split("\n")[0][:100], "size": len(c)})
+                    desc = c.split("\n")[0][:100]
+                    if desc == "---":  # frontmatter → ambil description:
+                        import re as _re
+                        m = _re.search(r"^description:\s*(.+)$", c, _re.M)
+                        if m: desc = m.group(1).strip()[:100]
+                    items.append({"name": os.path.basename(f)[:-3], "desc": desc, "size": len(c)})
                 except Exception: pass
             return self._json({"items": items})
         if self.path.startswith("/api/skills/read/"):
@@ -246,6 +329,14 @@ class H(SimpleHTTPRequestHandler):
             try: os.remove(os.path.join(HOME, "skills", name + ".md"))
             except Exception: pass
             return self._json({"ok": True})
+        if self.path == "/api/skills/install":
+            url = (body.get("url","") or "").strip()
+            if not url: return self._json({"error":"butuh url"}, 400)
+            try:
+                res = _install_skill_from_github(url)
+                return self._json(res)
+            except Exception as e:
+                return self._json({"error": str(e)}, 400)
         if self.path == "/api/pending":
             import glob
             reqs = []
