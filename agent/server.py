@@ -6,6 +6,10 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHan
 
 HOME = os.environ.get("LOKA_HOME", os.path.expanduser("~/loka"))
 SETTINGS_FILE = os.path.join(HOME, "ai_settings.json")
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from agent.core import parse_tool_call, reload_system_prompt
+from tools.local_tools import TOOLS
 
 def load_settings():
     try: return json.load(open(SETTINGS_FILE))
@@ -33,6 +37,40 @@ def llm():
 class H(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw): super().__init__(*a, directory=APP_DIR, **kw)
     def log_message(self, *a): pass
+    def _api_chat(self, st, messages):
+        """Satu panggilan ke LLM via API (OpenAI-compatible)."""
+        import urllib.request
+        req = urllib.request.Request(
+            st["base_url"].rstrip("/") + "/chat/completions",
+            data=json.dumps({"model": st.get("model","gpt-4o-mini"), "messages": messages, "max_tokens": 1000}).encode(),
+            headers={"Content-Type":"application/json","Authorization":"Bearer "+st["api_key"]})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return json.loads(r.read())
+
+    def _agent_loop_api(self, st, msgs):
+        """Agent loop: model via API hanya OTAK; tangan = tools lokal di device.
+           Maks 6 iterasi. Tool hasil di-inject, model putuskan langkah berikut."""
+        history = list(msgs)
+        for _ in range(6):
+            out = self._api_chat(st, [{"role":"system","content":reload_system_prompt(history[-1]["content"] if history else "")}] + history)
+            text = (out["choices"][0]["message"].get("content") or "").strip()
+            call = parse_tool_call(text)
+            print("[loop] text=%r call=%r" % (text[:120], call))
+            if not call or not call.get("tool"):
+                return out  # jawaban final
+            name, args = call.get("tool"), call.get("args", {})
+            try:
+                if name not in TOOLS:
+                    result = {"error": "tool '%s' tidak ada" % name}
+                else:
+                    result = TOOLS[name](**args) if isinstance(args, dict) else TOOLS[name](args)
+            except Exception as ex:
+                result = {"error": str(ex)}
+            history.append({"role":"assistant","content":text})
+            history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
+        return out  # habis iterasi — kembalikan apa adanya
+
+
     def _json(self, obj, code=200):
         b = json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(code); self.send_header("Content-Type","application/json")
@@ -65,17 +103,11 @@ class H(SimpleHTTPRequestHandler):
                     _sb.allow_host(urlparse(st["base_url"]).netloc.split(":")[0])
                 except Exception: pass
             msgs = body.get("messages", [])
-            # MODE CLOUD/HYBRID: proxy ke provider (key tidak pernah dikirim ke UI)
+            # MODE CLOUD/HYBRID: AGENT LOOP — model via API memutuskan,
+            # AGENT (device ini) mengeksekusi tools lokal & berulang sampai jawaban final.
             if st.get("mode") in ("cloud","hybrid") and st.get("api_key") and st.get("base_url"):
                 try:
-                    import urllib.request
-                    req = urllib.request.Request(
-                        st["base_url"].rstrip("/") + "/chat/completions",
-                        data=json.dumps({"model": st.get("model","gpt-4o-mini"), "messages": msgs, "max_tokens": 1000}).encode(),
-                        headers={"Content-Type":"application/json","Authorization":"Bearer "+st["api_key"]})
-                    with urllib.request.urlopen(req, timeout=60) as r:
-                        out = json.loads(r.read())
-                    return self._json(out)
+                    return self._json(self._agent_loop_api(st, msgs))
                 except Exception as e:
                     if st.get("mode") == "hybrid":
                         pass  # fallback ke lokal di bawah

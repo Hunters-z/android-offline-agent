@@ -1,3 +1,4 @@
+import re
 """
 Tool lokal agent — semua berjalan offline di dalam container.
 Agent hanya boleh memanggil tool di daftar ini (whitelist).
@@ -31,6 +32,25 @@ def calc(expression=None, percent=None, value=None, total=None, **kw):
         expression = str(value)
     if expression is None:
         return {"error": "butuh expression, atau percent+value"}
+    # pola bahasa Indonesia: "25% dari 1.200.000", "25 persen dari 1.2 juta", "diskon 20% dari 150000"
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:%|persen|percent)\s*(?:dari|of|diskon\s*(?:dari)?)\s*([\d.,]+(?:\s*(?:juta|ribu|miliar))?)", str(expression), re.I)
+    if m:
+        pct, val = m.group(1), m.group(2)
+        mult = 1
+        vl = val.lower()
+        if "juta" in vl: mult, val = 1_000_000, re.sub(r"\s*juta", "", vl)
+        elif "miliar" in vl: mult, val = 1_000_000_000, re.sub(r"\s*miliar", "", vl)
+        elif "ribu" in vl: mult, val = 1_000, re.sub(r"\s*ribu", "", vl)
+        def _num(t):
+            t = t.strip()
+            if "," in t and "." in t: return float(t.replace(".", "").replace(",", "."))
+            if "," in t: return float(t.replace(",", "."))
+            import re as _re
+            if _re.fullmatch(r"\d{1,3}(\.\d{3})+", t): return float(t.replace(".", ""))
+            return float(t)
+        val = _num(val)
+        expression = f"({pct.replace(',', '.')})/100*({val}*{mult})"
+
     allowed = {n: getattr(math, n) for n in
         ("sqrt","sin","cos","tan","log","log10","exp","floor","ceil","fabs","pow")}
     allowed.update({"pi": math.pi, "e": math.e, "abs": abs, "round": round, "min": min, "max": max})
