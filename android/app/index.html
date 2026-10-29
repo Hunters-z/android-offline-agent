@@ -87,10 +87,26 @@ header .st b{display:block; font-size:15px; font-weight:700; letter-spacing:-.02
 @keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
 #composer{padding:12px 6% 20px}
 .cbox{background:#fff;border:1px solid var(--line);border-radius:26px;box-shadow:0 2px 10px rgba(16,19,26,.07);display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 18px;max-width:760px;margin:0 auto;transition:border-color .15s, box-shadow .15s}
+#attRow{display:none;gap:8px;align-items:center;padding:0 22px 6px;max-width:760px;margin:0 auto}
+#attRow .chip{background:#EAF0FE;border-color:transparent}
+#attX{width:22px;height:22px;border-radius:50%;border:none;background:#e5e9f2;color:#555;font-weight:800;cursor:pointer}
+.usheet{position:fixed;inset:auto 0 0 0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(16,19,26,.18);padding:18px 20px 26px;z-index:60;display:none}
+.usheet.open{display:block}
+.usheet h3{margin:0 0 12px;font-size:15px}
+.uopt{display:flex;align-items:center;gap:12px;width:100%;padding:13px 10px;border:none;background:none;font-size:14.5px;font-weight:600;color:var(--txt);border-radius:12px;cursor:pointer;text-align:left}
+.uopt:hover{background:#F4F6FA}
 .cbox:focus-within{border-color:var(--acc);box-shadow:0 2px 14px rgba(37,99,235,.15)}
 .cboxX{max-width:72ch;margin:0 auto;display:flex;gap:10px;align-items:flex-end;
   background:#ffffff; border:1px solid var(--line); border-radius:20px; padding:10px 12px;
   box-shadow:var(--sh-md); transition:box-shadow .15s ease, border-color .15s ease}
+#attRow{display:none;gap:8px;align-items:center;padding:0 22px 6px;max-width:760px;margin:0 auto}
+#attRow .chip{background:#EAF0FE;border-color:transparent}
+#attX{width:22px;height:22px;border-radius:50%;border:none;background:#e5e9f2;color:#555;font-weight:800;cursor:pointer}
+.usheet{position:fixed;inset:auto 0 0 0;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(16,19,26,.18);padding:18px 20px 26px;z-index:60;display:none}
+.usheet.open{display:block}
+.usheet h3{margin:0 0 12px;font-size:15px}
+.uopt{display:flex;align-items:center;gap:12px;width:100%;padding:13px 10px;border:none;background:none;font-size:14.5px;font-weight:600;color:var(--txt);border-radius:12px;cursor:pointer;text-align:left}
+.uopt:hover{background:#F4F6FA}
 .cbox:focus-within{border-color:rgba(37,99,235,.55); box-shadow:0 0 0 3px rgba(37,99,235,.12), var(--sh-md)}
 textarea{flex:1; background:none; border:none; outline:none; color:var(--txt); font-size:14.5px;
   resize:none; font-family:inherit; max-height:130px; line-height:1.5; padding:6px 4px}
@@ -196,10 +212,21 @@ function mi(name, size){ size = size||18; return '<svg class="mi" width="'+size+
     </div>
   </div>
   <div id="composer">
+    <div id="attRow"><span class="chip" id="attChip"></span><button id="attX" onclick="attClear()">✕</button></div>
     <div class="cbox">
+      <button id="attBtn" title="Lampirkan" style="width:40px;height:40px;border-radius:50%;border:none;background:#EAF0FE;color:var(--acc);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:1px"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
       <textarea id="inp" rows="1" placeholder="Tanya apa saja…"></textarea>
       <button id="send"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-left:2px"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
     </div>
+  </div>
+  <div class="usheet" id="usheet">
+    <h3>Lampirkan</h3>
+    <button class="uopt" onclick="uPick('image')"><svg width="22" height="22" viewBox="0 0 24 24" fill="#2563eb"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg> Gambar / Foto</button>
+    <button class="uopt" onclick="uPick('doc')"><svg width="22" height="22" viewBox="0 0 24 24" fill="#f59e0b"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg> Dokumen / Teks</button>
+    <button class="uopt" onclick="uPick('audio')"><svg width="22" height="22" viewBox="0 0 24 24" fill="#10b981"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg> Suara / Audio</button>
+    <button class="uopt" onclick="uPick('video')"><svg width="22" height="22" viewBox="0 0 24 24" fill="#8b5cf6"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg> Video</button>
+    <button class="uopt" onclick="uPick('file')"><svg width="22" height="22" viewBox="0 0 24 24" fill="#64748b"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg> File Lainnya</button>
+    <input type="file" id="upFile" style="display:none">
   </div>
 </main>
 <div id="sheet">
@@ -264,9 +291,14 @@ function newChat(){hist.push([]); cur=hist.length-1; $('chat').innerHTML=''; ren
 function renderHist(){ $('hist').innerHTML=hist.map((h,i)=>{
   const t=h[0]?.c||'Kosong'; return `<div class="item" onclick="cur=${i};$('chat').innerHTML='';h.forEach(m=>addRow(m.r,m.c))">${t.slice(0,34)}</div>`}).join('');}
 async function send(){
-  if(busy)return; const q=$('inp').value.trim(); if(!q)return;
+  if(busy)return; const q=$('inp').value.trim(); if(!q && !_att)return;
+  let msg=q;
+  if(_att){
+    msg=(q?q+'\n':'')+'[LAMPIRAN '+(_att.label||'file').toUpperCase()+': ' + _att.path + (_att.text?'\nISI:\n'+_att.text:'') + ']';
+    attClear();
+  }
   $('inp').value=''; $('inp').style.height='auto'; busy=true; $('send').disabled=true;
-  addRow('me',q); hist[cur].push({r:'me',c:q});
+  addRow('me',msg); hist[cur].push({r:'me',c:msg});
   const bub=addRow('ai','','typing');
   try{
     const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -473,6 +505,31 @@ async function installSkill(){
 }
 async function delSkill(n){ await fetch('/api/skills/del/'+n,{method:'POST'}); loadSkills(); }
 async function delCron(id){ await fetch('/api/cron/del/'+id,{method:'POST'}); loadCron(); }
+
+let _att=null;
+const ACCEPTS={image:'image/*',doc:'.pdf,.txt,.md,.csv,.json,.doc,.docx,.py,.js,.html,.yaml,.yml,.xml,.log',audio:'audio/*',video:'video/*',file:'*/*'};
+function uPick(kind){
+  document.getElementById('usheet').classList.remove('open');
+  const f=document.getElementById('upFile');
+  f.accept=ACCEPTS[kind]||'*/*'; f.dataset.kind=kind; f.value='';
+  f.click();
+}
+document.getElementById('upFile').addEventListener('change', async function(){
+  const file=this.files[0]; if(!file) return;
+  const kind=this.dataset.kind;
+  document.getElementById('attChip').textContent='⏳ '+file.name+'…';
+  document.getElementById('attRow').style.display='flex';
+  const fd=new Blob([await file.arrayBuffer()],{type:file.type||'application/octet-stream'});
+  try{
+    const r=await fetch('/api/upload?filename='+encodeURIComponent(file.name)+'&kind='+kind,{method:'POST',body:fd});
+    const j=await r.json();
+    if(j.ok){ _att=j; document.getElementById('attChip').textContent=(j.label||'file')+': '+file.name; }
+    else { document.getElementById('attChip').textContent='Gagal: '+(j.error||'?'); setTimeout(attClear,2000); }
+  }catch(e){ document.getElementById('attChip').textContent='Gagal upload'; setTimeout(attClear,2000); }
+});
+function attClear(){ _att=null; document.getElementById('attRow').style.display='none'; }
+document.getElementById('attBtn').addEventListener('click',()=>document.getElementById('usheet').classList.toggle('open'));
+document.addEventListener('click',e=>{ const sh=document.getElementById('usheet'); if(sh.classList.contains('open') && !sh.contains(e.target) && e.target.closest('#attBtn')===null) sh.classList.remove('open'); });
 function chipClick(el){ document.getElementById('inp').value=el.textContent; document.getElementById('send').click(); }
 const _inp=document.getElementById('inp');
 _inp.addEventListener('input',()=>{ _inp.style.height='auto'; _inp.style.height=Math.min(_inp.scrollHeight,120)+'px'; });

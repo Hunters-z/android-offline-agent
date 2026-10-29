@@ -214,6 +214,22 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(code); self.send_header("Content-Type","application/json")
         self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
+        if self.path.startswith("/uploads/"):
+            from urllib.parse import unquote
+            fname = os.path.basename(unquote(self.path))
+            fpath = os.path.join(HOME, "uploads", fname)
+            if not os.path.isfile(fpath): return self._json({"error": "not found"}, 404)
+            import mimetypes as _mt
+            ctype = _mt.guess_type(fname)[0] or "application/octet-stream"
+            data = open(fpath, "rb").read()
+            self.send_response(200); self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data))); self.end_headers()
+            return self.wfile.write(data)
+        if self.path == "/api/uploads":
+            import glob as _g
+            items = [{"name": os.path.basename(f), "size": os.path.getsize(f)}
+                     for f in sorted(_g.glob(os.path.join(HOME, "uploads", "*")), key=os.path.getmtime, reverse=True)]
+            return self._json({"items": items[:100]})
         if self.path == "/api/cron":
             import glob as _g
             jobs = []
@@ -282,7 +298,33 @@ class H(SimpleHTTPRequestHandler):
             return self._json({m["key"]: {"downloaded": m["downloaded"], "active": m["active"]} for m in list_models()})
         return super().do_GET()
     def do_POST(self):
-        n = int(self.headers.get("Content-Length", 0)); body = json.loads(self.rfile.read(n) or b"{}")
+        n = int(self.headers.get("Content-Length", 0)); raw = self.rfile.read(n) if (self.path.startswith("/api/upload") or n>0) else b""; body = None
+        if self.path.startswith("/api/upload?"):
+            from urllib.parse import urlparse, parse_qs, unquote
+            q = parse_qs(urlparse(self.path).query)
+            fname = unquote((q.get("filename") or ["file"])[0])
+            fname = os.path.basename(fname).replace(" ", "_") or "file"
+            kind = (q.get("kind") or ["file"])[0]
+            data = raw
+            if len(data) > 20 * 1024 * 1024:
+                return self._json({"ok": False, "error": "maks 20 MB"}, 413)
+            up_dir = os.path.join(HOME, "uploads"); os.makedirs(up_dir, exist_ok=True)
+            open(os.path.join(up_dir, fname), "wb").write(data)
+            sizes = {"image": "gambar", "audio": "suara", "video": "video", "doc": "dokumen", "file": "file"}
+            info = {"ok": True, "path": "uploads/" + fname, "kind": kind, "label": sizes.get(kind, "file"), "size": len(data)}
+            text_ext = (".txt", ".md", ".csv", ".json", ".py", ".js", ".html", ".css", ".xml", ".log", ".yaml", ".yml")
+            if fname.lower().endswith(text_ext):
+                try:
+                    info["text"] = open(os.path.join(up_dir, fname), encoding="utf-8", errors="replace").read()[:4000]
+                except Exception: pass
+            return self._json(info)
+        if self.path == "/api/uploads":
+            import glob as _g
+            items = []
+            for f in sorted(_g.glob(os.path.join(HOME, "uploads", "*")), key=os.path.getmtime, reverse=True):
+                items.append({"name": os.path.basename(f), "size": os.path.getsize(f)})
+            return self._json({"items": items[:100]})
+        body = (json.loads(raw or b"{}") if not self.path.startswith("/api/upload") else {}) or {}
         if self.path == "/api/model":
             try:
                 r = set_active(body.get("model","tiny")); return self._json({"ok": True, **r})
@@ -415,6 +457,7 @@ LOKA_TOOL_SPECS = [
  {"type":"function","function":{"name":"mem_list","description":"Lihat memori","parameters":{"type":"object","properties":{}}}},
  {"type":"function","function":{"name":"mem_forget","description":"Hapus fakta dari memori","parameters":{"type":"object","properties":{"content":{"type":"string"}},"required":["content"]}}},
  {"type":"function","function":{"name":"shell","description":"Jalankan perintah terbatas di folder project (git/node/python3/ls/cat/grep dll)","parameters":{"type":"object","properties":{"command":{"type":"string"},"project":{"type":"string"}},"required":["command"]}}},
+ {"type":"function","function":{"name":"image_gen","description":"Buat gambar dari deskripsi (HANYA jika Otak API aktif). Contoh args: {prompt: kucing oranye duduk, filename: kucing}","parameters":{"type":"object","properties":{"prompt":{"type":"string"},"filename":{"type":"string"}},"required":["prompt"]}}},
 ]
 
 def agent_loop_run(msgs):

@@ -241,3 +241,63 @@ def shell(command=None, project=None, **kw):
 TOOLS.update({
     "shell": shell,
 })
+
+# ================= IMAGE GENERATION (HANYA MODE API) =================
+# Otak berat = cloud. Agent device hanya menerima hasil file gambar.
+def image_gen(prompt=None, filename=None, **kw):
+    """Generate gambar via API (butuh mode Cloud/Hybrid aktif). Hasil disimpan ke sandbox lokal."""
+    if not prompt:
+        return {"error": "butuh prompt (deskripsi gambar)"}
+    import json as _j, os as _os, base64 as _b64
+    home = os.environ.get("LOKA_HOME", os.path.expanduser("~/loka"))
+    st = {}
+    try: st = _j.load(open(os.path.join(home, "ai_settings.json")))
+    except Exception: pass
+    if st.get("mode") not in ("cloud", "hybrid") or not st.get("api_key") or not st.get("base_url"):
+        return {"error": "image_gen butuh Otak API aktif (mode Cloud/Hybrid). Buka tab Otak API untuk menghubungkan."}
+    base = st["base_url"].rstrip("/")
+    key = st["api_key"]
+    model = st.get("model", "gpt-4o-mini")
+    fname = (filename or "gambar").strip().replace(" ", "_")
+    if not fname.endswith(".png"): fname += ".png"
+    out_dir = os.path.join(home, "uploads"); os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, fname)
+    headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json"}
+    # 1) OpenAI-compatible images endpoint (OpenAI/OpenRouter/9router/mock)
+    try:
+        import urllib.request as _u
+        body = _j.dumps({"model": "gpt-image-1", "prompt": prompt, "n": 1, "size": "1024x1024"}).encode()
+        req = _u.Request(base + "/images/generations", data=body, headers=headers)
+        with _u.urlopen(req, timeout=120) as r:
+            resp = _j.loads(r.read())
+        d = resp["data"][0]
+        if d.get("b64_json"):
+            open(out_path, "wb").write(_b64.b64decode(d["b64_json"]))
+        elif d.get("url"):
+            _u.urlretrieve(d["url"], out_path)
+        return {"ok": True, "path": "uploads/" + fname}
+    except Exception as e1:
+        err1 = str(e1)
+    # 2) Gemini Imagen
+    try:
+        host = base.split("//")[1].split("/")[0]
+        if "generativelanguage" in host or "gemini" in base:
+            import urllib.request as _u
+            url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=" + key
+            body = _j.dumps({"instances": [{"prompt": prompt}], "parameters": {"sampleCount": 1}}).encode()
+            req = _u.Request(url, data=body, headers={"Content-Type": "application/json"})
+            try:
+                import agent.sandbox as _sb; _sb.allow_host("generativelanguage.googleapis.com")
+            except Exception: pass
+            with _u.urlopen(req, timeout=120) as r:
+                resp = _j.loads(r.read())
+            b64 = resp["predictions"][0]["bytesBase64Encoded"]
+            open(out_path, "wb").write(_b64.b64decode(b64))
+            return {"ok": True, "path": "uploads/" + fname}
+    except Exception as e2:
+        return {"error": "gagal via 2 jalur: images API (%s) | gemini (%s)" % (err1[:120], str(e2)[:120])}
+    return {"error": "provider gambar tidak dikenali dari base_url: %s" % base}
+
+TOOLS.update({
+    "image_gen": image_gen,
+})
