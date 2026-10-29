@@ -23,8 +23,12 @@ SYSTEM = (
     "Gunakan shell untuk mengerjakan project (lihat file, git status, jalankan skrip python/node). "
     "Gunakan mem_save untuk menyimpan fakta penting tentang pengguna (nama, kebiasaan, preferensi, proyek) "
     "saat pengguna menyebutkannya — sekali saja, ringkas satu kalimat. "
-    "Jika perlu tool, jawab HANYA satu baris JSON: {\"tool\": \"nama\", \"args\": {...}} "
-    "tanpa teks lain. Setelah hasil tool diberikan, jawab pertanyaan user dengan bahasa manusia. "
+    "ATURAN TOOL SANGAT PENTING: jika user meminta aksi (catat, jalankan, baca file, hitung), "
+    "jawab HANYA satu baris JSON persis: {\"tool\": \"nama\", \"args\": {...}} — TANPA kalimat pembuka/penjelasan/maaf. "
+    "Contoh catat → {\"tool\": \"mem_save\", \"args\": {\"content\": \"isi catatan\"}}. "
+    "Contoh jalankan file → {\"tool\": \"shell\", \"args\": {\"command\": \"python3 file.py\", \"project\": \"nama\"}}. "
+    "Kamu MEMILIKI dan BISA memakai tool itu — jangan bilang tidak bisa. "
+    "Setelah hasil tool diberikan, jawab pertanyaan user Setelah hasil tool diberikan, jawab pertanyaan user dengan bahasa manusia. "
     "Kamu TIDAK punya akses internet dan tidak boleh mengaku bisa."
 )
 

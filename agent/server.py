@@ -36,7 +36,7 @@ def _request_approval(name, args, chat_id=None):
     req = {"id": rid, "tool": name, "args": args, "status": "pending", "ts": _t.time(),
            "chat_id": chat_id or ""}
     json.dump(req, open(os.path.join(PENDING_DIR, rid + ".json"), "w"))
-    for _ in range(120):
+    for _ in range(600):
         _t.sleep(1)
         try: cur = json.load(open(os.path.join(PENDING_DIR, rid + ".json")))
         except Exception: return {"status":"error"}
@@ -368,11 +368,9 @@ class H(SimpleHTTPRequestHandler):
                         pass  # fallback ke lokal di bawah
                     else:
                         return self._json({"error": "API gagal: %s" % e}, 502)
-            # MODE LOKAL
+            # MODE LOKAL — agent loop penuh juga (system prompt + tools + approval)
             try:
-                with _lock:
-                    out = llm().create_chat_completion(messages=msgs, max_tokens=500, temperature=0.4)
-                return self._json(out)
+                return self._json(agent_loop_run(msgs))
             except Exception as e:
                 return self._json({"error": str(e)}, 500)
         return self._json({"error": "not found"}, 404)
@@ -403,6 +401,22 @@ def _cron_run_job(job):
         f.write(json.dumps({"ts": _time.time(), "task": task, "result": result, "source": job.get("name","routine")}, ensure_ascii=False) + "\n")
     return result
 
+LOKA_TOOL_SPECS = [
+ {"type":"function","function":{"name":"calc","description":"Hitung ekspresi matematika atau persen","parameters":{"type":"object","properties":{"expression":{"type":"string"}},"required":["expression"]}}},
+ {"type":"function","function":{"name":"now","description":"Jam & tanggal sekarang","parameters":{"type":"object","properties":{}}}},
+ {"type":"function","function":{"name":"battery","description":"Status baterai perangkat","parameters":{"type":"object","properties":{}}}},
+ {"type":"function","function":{"name":"note_save","description":"Simpan catatan","parameters":{"type":"object","properties":{"title":{"type":"string"},"content":{"type":"string"}},"required":["title","content"]}}},
+ {"type":"function","function":{"name":"note_list","description":"Daftar catatan","parameters":{"type":"object","properties":{}}}},
+ {"type":"function","function":{"name":"note_read","description":"Baca catatan","parameters":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]}}},
+ {"type":"function","function":{"name":"file_write","description":"Tulis file di sandbox","parameters":{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}}},
+ {"type":"function","function":{"name":"file_read","description":"Baca file di sandbox","parameters":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}},
+ {"type":"function","function":{"name":"file_list","description":"Daftar file","parameters":{"type":"object","properties":{"path":{"type":"string"}}}}},
+ {"type":"function","function":{"name":"mem_save","description":"Simpan fakta penting tentang pengguna ke memori","parameters":{"type":"object","properties":{"content":{"type":"string"}},"required":["content"]}}},
+ {"type":"function","function":{"name":"mem_list","description":"Lihat memori","parameters":{"type":"object","properties":{}}}},
+ {"type":"function","function":{"name":"mem_forget","description":"Hapus fakta dari memori","parameters":{"type":"object","properties":{"content":{"type":"string"}},"required":["content"]}}},
+ {"type":"function","function":{"name":"shell","description":"Jalankan perintah terbatas di folder project (git/node/python3/ls/cat/grep dll)","parameters":{"type":"object","properties":{"command":{"type":"string"},"project":{"type":"string"}},"required":["command"]}}},
+]
+
 def agent_loop_run(msgs):
     """Agent loop generik module-level: otak sesuai mode (API/lokal), tools lokal, approval."""
     st = load_settings()
@@ -431,11 +445,32 @@ def agent_loop_run(msgs):
         else:
             try:
                 with _lock:
-                    out = llm().create_chat_completion(messages=[sys_msg]+history, max_tokens=500, temperature=0.4)
+                    out = llm().create_chat_completion(messages=[sys_msg]+history, max_tokens=500, temperature=0.4, tools=LOKA_TOOL_SPECS)
             except Exception as e:
                 return {"choices":[{"message":{"content":"error: %s" % e}}]}
-        text = (out["choices"][0]["message"].get("content") or "").strip()
-        call = parse_tool_call(text)
+        tc = (out["choices"][0]["message"].get("tool_calls") or [])
+        call = None
+        if tc:
+            try:
+                fn = tc[0]["function"]; call = {"tool": fn["name"], "args": json.loads(fn.get("arguments") or "{}")}
+            except Exception: call = None
+        if not call:
+            text = (out["choices"][0]["message"].get("content") or "").strip()
+            call = parse_tool_call(text)
+        if not call and "<tool_call>" in text:
+            import re as _re
+            m = _re.search(r"<tool_call>\s*\{(.*)\}\s*</tool_call>", text, _re.S)
+            if m:
+                try:
+                    inner = json.loads("{" + m.group(1).replace("{{","{").replace("}}","}"))
+                    call = {"tool": inner.get("name"), "args": inner.get("arguments") or {}}
+                except Exception:
+                    # fallback regex name/arguments
+                    nm = _re.search(r'"name"\s*:\s*"([^"]+)"', m.group(1))
+                    ag = _re.search(r'"arguments"\s*:\s*\{(.*?)\}\s*\}', m.group(1), _re.S)
+                    if nm:
+                        call = {"tool": nm.group(1), "args": json.loads("{"+ag.group(1)+"}") if ag else {}}
+            text_out = _re.sub(r"<tool_call>.*</tool_call>", "", text, flags=_re.S).strip()
         if not call or not call.get("tool"):
             return out
         name, args = call.get("tool"), call.get("args", {})
