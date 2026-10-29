@@ -16,28 +16,43 @@ SAFE_TOOLS = {"calc","now","battery","mem_list","note_list","file_list"}  # auto
 APPROVAL_FILE = os.path.join(HOME, "approval_policy.json")   # {"always": ["file_write",...]}
 PENDING_DIR = os.path.join(HOME, "pending")                  # 1 file per request
 
+_SESSION_OK = set()          # tool disetujui utk sesi server (sampai restart)
+_CHAT_OK = {}                # chat_id -> set(tool) utk percakapan ini
+
 def _load_policy():
     try: return json.load(open(APPROVAL_FILE))
     except Exception: return {"always": []}
 
-def _needs_approval(name):
+def _needs_approval(name, chat_id=None):
     if name in SAFE_TOOLS: return False
+    if name in _SESSION_OK: return False
+    if chat_id and name in _CHAT_OK.get(chat_id, set()): return False
     return name not in _load_policy().get("always", [])
 
-def _request_approval(name, args):
+def _request_approval(name, args, chat_id=None):
     import uuid, time as _t
     os.makedirs(PENDING_DIR, exist_ok=True)
     rid = uuid.uuid4().hex[:12]
-    req = {"id": rid, "tool": name, "args": args, "status": "pending", "ts": _t.time()}
+    req = {"id": rid, "tool": name, "args": args, "status": "pending", "ts": _t.time(),
+           "chat_id": chat_id or ""}
     json.dump(req, open(os.path.join(PENDING_DIR, rid + ".json"), "w"))
-    # tunggu keputusan user maks 120 detik
     for _ in range(120):
         _t.sleep(1)
         try: cur = json.load(open(os.path.join(PENDING_DIR, rid + ".json")))
         except Exception: return {"status":"error"}
-        if cur.get("status") != "pending":
+        st = cur.get("status")
+        if st != "pending":
             try: os.remove(os.path.join(PENDING_DIR, rid + ".json"))
             except Exception: pass
+            # terapkan scope
+            if st == "approved_chat" and (chat_id or cur.get("chat_id")):
+                cid = chat_id or cur.get("chat_id")
+                _CHAT_OK.setdefault(cid, set()).add(name)
+            elif st == "approved_always":
+                pol = _load_policy()
+                if name not in pol.get("always", []):
+                    pol.setdefault("always", []).append(name)
+                    json.dump(pol, open(APPROVAL_FILE, "w"))
             return cur
     return {"status":"timeout"}
 
@@ -89,9 +104,13 @@ class H(SimpleHTTPRequestHandler):
             if not call or not call.get("tool"):
                 return out  # jawaban final
             name, args = call.get("tool"), call.get("args", {})
-            if _needs_approval(name):
-                dec = _request_approval(name, args)
-                if dec.get("status") != "approved":
+            chat_id = None
+            for _m in msgs:
+                if _m.get("role") == "user" and not _m.get("content","").startswith("[HASIL TOOL]"):
+                    chat_id = str(hash(_m["content"]) % 10**8); break
+            if _needs_approval(name, chat_id):
+                dec = _request_approval(name, args, chat_id)
+                if not str(dec.get("status","")).startswith("approved"):
                     result = {"error": "[DITOLAK USER] aksi %s tidak diizinkan (%s)" % (name, dec.get("status"))}
                     history.append({"role":"assistant","content":text})
                     history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
@@ -153,11 +172,8 @@ class H(SimpleHTTPRequestHandler):
             fp = os.path.join(PENDING_DIR, rid + ".json")
             try: cur = json.load(open(fp))
             except Exception: return self._json({"error":"tidak ada"},404)
-            cur["status"] = "approved" if body.get("approve") else "denied"
-            if body.get("always"):
-                pol = _load_policy(); 
-                if cur["tool"] not in pol["always"]: pol["always"].append(cur["tool"])
-                json.dump(pol, open(APPROVAL_FILE,"w"))
+            level = body.get("level","once")   # once | chat | always | deny
+            cur["status"] = {"once":"approved","chat":"approved_chat","always":"approved_always","deny":"denied"}.get(level,"denied")
             json.dump(cur, open(fp,"w"))
             return self._json({"ok":True})
         if self.path == "/api/settings":
@@ -213,11 +229,8 @@ class H(SimpleHTTPRequestHandler):
             fp = os.path.join(PENDING_DIR, rid + ".json")
             try: cur = json.load(open(fp))
             except Exception: return self._json({"error":"tidak ada"},404)
-            cur["status"] = "approved" if body.get("approve") else "denied"
-            if body.get("always"):
-                pol = _load_policy(); 
-                if cur["tool"] not in pol["always"]: pol["always"].append(cur["tool"])
-                json.dump(pol, open(APPROVAL_FILE,"w"))
+            level = body.get("level","once")   # once | chat | always | deny
+            cur["status"] = {"once":"approved","chat":"approved_chat","always":"approved_always","deny":"denied"}.get(level,"denied")
             json.dump(cur, open(fp,"w"))
             return self._json({"ok":True})
         if self.path == "/api/settings":
@@ -317,7 +330,7 @@ def agent_loop_run(msgs):
         name, args = call.get("tool"), call.get("args", {})
         if _needs_approval(name):
             dec = _request_approval(name, args)
-            if dec.get("status") != "approved":
+            if not str(dec.get("status","")).startswith("approved"):
                 result = {"error": "[DITOLAK USER] %s (%s)" % (name, dec.get("status"))}
             else:
                 result = _run_tool(name, args)

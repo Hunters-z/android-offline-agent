@@ -337,13 +337,12 @@ $('apiTest').addEventListener('click', async ()=>{
     <h2 style="font-size:15px;font-weight:700;margin-bottom:2px">Loka ingin melakukan aksi</h2>
     <p id="appTool" style="font-size:12px;color:var(--dim);margin-bottom:10px"></p>
     <pre id="appArgs" style="font-size:11px;background:#f1f3f8;border-radius:12px;padding:12px;overflow-x:auto;white-space:pre-wrap;font-family:ui-monospace,monospace;margin-bottom:14px"></pre>
-    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-bottom:12px">
-      <input type="checkbox" id="appAlways" style="accent-color:#2563eb"> Selalu izinkan tool ini
-    </label>
-    <div style="display:flex;gap:8px">
-      <button id="appDeny" style="flex:1;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--txt);font-weight:600;cursor:pointer">Tolak</button>
-      <button id="appOk" style="flex:1;padding:12px;border:none;border-radius:14px;background:var(--acc);color:#fff;font-weight:700;cursor:pointer">Izinkan</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="appBtn" data-l="once" style="flex:1;padding:11px 4px;border:1.5px solid var(--acc);border-radius:12px;background:var(--acc);color:#fff;font-weight:700;font-size:12px;cursor:pointer">Sekali</button>
+      <button class="appBtn" data-l="chat" style="flex:1;padding:11px 4px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--txt);font-weight:600;font-size:12px;cursor:pointer">Chat ini</button>
+      <button class="appBtn" data-l="always" style="flex:1;padding:11px 4px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--txt);font-weight:600;font-size:12px;cursor:pointer">Selalu</button>
     </div>
+    <button id="appDeny" style="width:100%;padding:11px;border:none;border-radius:12px;background:#fdecec;color:#dc2626;font-weight:600;font-size:12.5px;cursor:pointer">Tolak</button>
   </div>
 </div>
 <style>@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}</style>
@@ -364,17 +363,16 @@ async function pollApproval(){
     }
   }catch(e){}
 }
-function decideApproval(approve){
+function decideApproval(level){
   const id=window._appReq; if(!id) return;
-  const always=document.getElementById('appAlways').checked;
   fetch('/api/approve/'+id,{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({approve:approve,always:always})}).finally(()=>{
+    body:JSON.stringify({level:level})}).finally(()=>{
     document.getElementById('appsheet').style.display='none';
     window._appReq=null; _appBusy=false;
   });
 }
-document.getElementById('appOk').addEventListener('click',()=>decideApproval(true));
-document.getElementById('appDeny').addEventListener('click',()=>decideApproval(false));
+document.querySelectorAll('.appBtn').forEach(b=>b.addEventListener('click',()=>decideApproval(b.dataset.l)));
+document.getElementById('appDeny').addEventListener('click',()=>decideApproval('deny'));
 setInterval(pollApproval,1500); pollApproval();
 </script>
 
