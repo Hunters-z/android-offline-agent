@@ -2,7 +2,7 @@
 Melayani UI Muse-style + API chat. Jalankan di dalam jail proot."""
 import json, os, sys, threading
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHandler
 
 HOME = os.environ.get("LOKA_HOME", os.path.expanduser("~/loka"))
 SETTINGS_FILE = os.path.join(HOME, "ai_settings.json")
@@ -10,6 +10,36 @@ import sys as _sys
 _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agent.core import parse_tool_call, reload_system_prompt
 from tools.local_tools import TOOLS
+
+# ============ APPROVAL SYSTEM ============
+SAFE_TOOLS = {"calc","now","battery","mem_list","note_list","file_list"}  # auto-approve
+APPROVAL_FILE = os.path.join(HOME, "approval_policy.json")   # {"always": ["file_write",...]}
+PENDING_DIR = os.path.join(HOME, "pending")                  # 1 file per request
+
+def _load_policy():
+    try: return json.load(open(APPROVAL_FILE))
+    except Exception: return {"always": []}
+
+def _needs_approval(name):
+    if name in SAFE_TOOLS: return False
+    return name not in _load_policy().get("always", [])
+
+def _request_approval(name, args):
+    import uuid, time as _t
+    os.makedirs(PENDING_DIR, exist_ok=True)
+    rid = uuid.uuid4().hex[:12]
+    req = {"id": rid, "tool": name, "args": args, "status": "pending", "ts": _t.time()}
+    json.dump(req, open(os.path.join(PENDING_DIR, rid + ".json"), "w"))
+    # tunggu keputusan user maks 120 detik
+    for _ in range(120):
+        _t.sleep(1)
+        try: cur = json.load(open(os.path.join(PENDING_DIR, rid + ".json")))
+        except Exception: return {"status":"error"}
+        if cur.get("status") != "pending":
+            try: os.remove(os.path.join(PENDING_DIR, rid + ".json"))
+            except Exception: pass
+            return cur
+    return {"status":"timeout"}
 
 def load_settings():
     try: return json.load(open(SETTINGS_FILE))
@@ -59,6 +89,13 @@ class H(SimpleHTTPRequestHandler):
             if not call or not call.get("tool"):
                 return out  # jawaban final
             name, args = call.get("tool"), call.get("args", {})
+            if _needs_approval(name):
+                dec = _request_approval(name, args)
+                if dec.get("status") != "approved":
+                    result = {"error": "[DITOLAK USER] aksi %s tidak diizinkan (%s)" % (name, dec.get("status"))}
+                    history.append({"role":"assistant","content":text})
+                    history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
+                    continue
             try:
                 if name not in TOOLS:
                     result = {"error": "tool '%s' tidak ada" % name}
@@ -76,6 +113,25 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(code); self.send_header("Content-Type","application/json")
         self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
+        if self.path == "/api/pending":
+            import glob
+            reqs = []
+            for f in glob.glob(os.path.join(PENDING_DIR, "*.json")):
+                try: reqs.append(json.load(open(f)))
+                except Exception: pass
+            return self._json({"items": reqs})
+        if self.path.startswith("/api/approve/"):
+            rid = self.path.rsplit("/",1)[-1].split("?")[0]
+            fp = os.path.join(PENDING_DIR, rid + ".json")
+            try: cur = json.load(open(fp))
+            except Exception: return self._json({"error":"tidak ada"},404)
+            cur["status"] = "approved" if body.get("approve") else "denied"
+            if body.get("always"):
+                pol = _load_policy(); 
+                if cur["tool"] not in pol["always"]: pol["always"].append(cur["tool"])
+                json.dump(pol, open(APPROVAL_FILE,"w"))
+            json.dump(cur, open(fp,"w"))
+            return self._json({"ok":True})
         if self.path == "/api/settings":
             st = load_settings()
             safe = dict(st); safe["api_key"] = (st.get("api_key","")[:4] + "…" ) if st.get("api_key") else ""
@@ -89,6 +145,25 @@ class H(SimpleHTTPRequestHandler):
             try:
                 r = set_active(body.get("model","tiny")); return self._json({"ok": True, **r})
             except ValueError as e: return self._json({"ok": False, "error": str(e)}, 400)
+        if self.path == "/api/pending":
+            import glob
+            reqs = []
+            for f in glob.glob(os.path.join(PENDING_DIR, "*.json")):
+                try: reqs.append(json.load(open(f)))
+                except Exception: pass
+            return self._json({"items": reqs})
+        if self.path.startswith("/api/approve/"):
+            rid = self.path.rsplit("/",1)[-1].split("?")[0]
+            fp = os.path.join(PENDING_DIR, rid + ".json")
+            try: cur = json.load(open(fp))
+            except Exception: return self._json({"error":"tidak ada"},404)
+            cur["status"] = "approved" if body.get("approve") else "denied"
+            if body.get("always"):
+                pol = _load_policy(); 
+                if cur["tool"] not in pol["always"]: pol["always"].append(cur["tool"])
+                json.dump(pol, open(APPROVAL_FILE,"w"))
+            json.dump(cur, open(fp,"w"))
+            return self._json({"ok":True})
         if self.path == "/api/settings":
             # simpan konfigurasi provider
             allowed = {k: body.get(k) for k in ("mode","provider","base_url","api_key","model") if k in body}
@@ -125,4 +200,4 @@ class H(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(os.environ.get("LOKA_PORT", "8088"))
     print(f"[loka] engine UI: http://127.0.0.1:{port}  (buka di browser HP)")
-    HTTPServer(("127.0.0.1", port), H).serve_forever()
+    ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()

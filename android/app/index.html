@@ -330,5 +330,52 @@ $('apiTest').addEventListener('click', async ()=>{
   }catch(e){ $('apiStatus').textContent='Gagal: '+e.message; }
 });
 </script>
+
+<div id="appsheet" style="position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center;z-index:99">
+  <div class="card" style="width:min(520px,100vw);padding:20px 22px 28px;border-radius:24px 24px 0 0;animation:up .25s ease">
+    <div style="width:40px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 14px"></div>
+    <h2 style="font-size:15px;font-weight:700;margin-bottom:2px">Loka ingin melakukan aksi</h2>
+    <p id="appTool" style="font-size:12px;color:var(--dim);margin-bottom:10px"></p>
+    <pre id="appArgs" style="font-size:11px;background:#f1f3f8;border-radius:12px;padding:12px;overflow-x:auto;white-space:pre-wrap;font-family:ui-monospace,monospace;margin-bottom:14px"></pre>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-bottom:12px">
+      <input type="checkbox" id="appAlways" style="accent-color:#2563eb"> Selalu izinkan tool ini
+    </label>
+    <div style="display:flex;gap:8px">
+      <button id="appDeny" style="flex:1;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;color:var(--txt);font-weight:600;cursor:pointer">Tolak</button>
+      <button id="appOk" style="flex:1;padding:12px;border:none;border-radius:14px;background:var(--acc);color:#fff;font-weight:700;cursor:pointer">Izinkan</button>
+    </div>
+  </div>
+</div>
+<style>@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}</style>
+<script>
+let _appBusy=false;
+async function pollApproval(){
+  if(_appBusy) return;
+  try{
+    const j=await (await fetch('/api/pending')).json();
+    const it=(j.items||[]).find(r=>r.status==='pending');
+    if(it){
+      _appBusy=true;
+      document.getElementById('appTool').textContent='Tool: '+it.tool;
+      document.getElementById('appArgs').textContent=JSON.stringify(it.args,null,2);
+      document.getElementById('appAlways').checked=false;
+      document.getElementById('appsheet').style.display='flex';
+      window._appReq=it.id;
+    }
+  }catch(e){}
+}
+function decideApproval(approve){
+  const id=window._appReq; if(!id) return;
+  const always=document.getElementById('appAlways').checked;
+  fetch('/api/approve/'+id,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({approve:approve,always:always})}).finally(()=>{
+    document.getElementById('appsheet').style.display='none';
+    window._appReq=null; _appBusy=false;
+  });
+}
+document.getElementById('appOk').addEventListener('click',()=>decideApproval(true));
+document.getElementById('appDeny').addEventListener('click',()=>decideApproval(false));
+setInterval(pollApproval,1500); pollApproval();
+</script>
 </body>
 </html>
