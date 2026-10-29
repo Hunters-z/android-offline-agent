@@ -113,6 +113,34 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(code); self.send_header("Content-Type","application/json")
         self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
+        if self.path == "/api/cron":
+            import glob as _g
+            jobs = []
+            for f in _g.glob(os.path.join(CRON_DIR, "*.json")):
+                try: jobs.append(json.load(open(f)))
+                except Exception: pass
+            return self._json({"items": jobs})
+        if self.path == "/api/cron/add":
+            import uuid as _u
+            os.makedirs(CRON_DIR, exist_ok=True)
+            job = {"id": _u.uuid4().hex[:10], "name": body.get("name","rutinitas"),
+                   "task": body.get("task",""), "interval_minutes": int(body.get("interval_minutes",60)),
+                   "last_run": 0, "paused": False}
+            json.dump(job, open(os.path.join(CRON_DIR, job["id"] + ".json"), "w"))
+            return self._json({"ok": True, "id": job["id"]})
+        if self.path.startswith("/api/cron/del/"):
+            rid = self.path.rsplit("/",1)[-1]
+            try: os.remove(os.path.join(CRON_DIR, rid + ".json"))
+            except Exception: pass
+            return self._json({"ok": True})
+        if self.path == "/api/feed":
+            feed = os.path.join(HOME, "feed.jsonl")
+            items = []
+            try:
+                with open(feed) as f:
+                    items = [json.loads(l) for l in f if l.strip()]
+            except FileNotFoundError: pass
+            return self._json({"items": items[-20:][::-1]})
         if self.path == "/api/pending":
             import glob
             reqs = []
@@ -145,6 +173,34 @@ class H(SimpleHTTPRequestHandler):
             try:
                 r = set_active(body.get("model","tiny")); return self._json({"ok": True, **r})
             except ValueError as e: return self._json({"ok": False, "error": str(e)}, 400)
+        if self.path == "/api/cron":
+            import glob as _g
+            jobs = []
+            for f in _g.glob(os.path.join(CRON_DIR, "*.json")):
+                try: jobs.append(json.load(open(f)))
+                except Exception: pass
+            return self._json({"items": jobs})
+        if self.path == "/api/cron/add":
+            import uuid as _u
+            os.makedirs(CRON_DIR, exist_ok=True)
+            job = {"id": _u.uuid4().hex[:10], "name": body.get("name","rutinitas"),
+                   "task": body.get("task",""), "interval_minutes": int(body.get("interval_minutes",60)),
+                   "last_run": 0, "paused": False}
+            json.dump(job, open(os.path.join(CRON_DIR, job["id"] + ".json"), "w"))
+            return self._json({"ok": True, "id": job["id"]})
+        if self.path.startswith("/api/cron/del/"):
+            rid = self.path.rsplit("/",1)[-1]
+            try: os.remove(os.path.join(CRON_DIR, rid + ".json"))
+            except Exception: pass
+            return self._json({"ok": True})
+        if self.path == "/api/feed":
+            feed = os.path.join(HOME, "feed.jsonl")
+            items = []
+            try:
+                with open(feed) as f:
+                    items = [json.loads(l) for l in f if l.strip()]
+            except FileNotFoundError: pass
+            return self._json({"items": items[-20:][::-1]})
         if self.path == "/api/pending":
             import glob
             reqs = []
@@ -197,7 +253,110 @@ class H(SimpleHTTPRequestHandler):
                 return self._json({"error": str(e)}, 500)
         return self._json({"error": "not found"}, 404)
 
+# ============ CRON / ROUTINES ============
+# Rutinitas berjalan sendiri walau UI ditutup — agent loop penuh (tools lokal + otak).
+import threading as _threading
+import time as _time
+import glob as _glob
+CRON_DIR = os.path.join(HOME, "cron")
+
+def _cron_run_job(job):
+    """Eksekusi 1 job: buat pesan tugas → agent loop (otak sesuai mode aktif)."""
+    task = job.get("task","")
+    msgs = [{"role":"user","content":"[ROUTINE] " + task}]
+    try:
+        st = load_settings()
+        if st.get("mode") in ("cloud","hybrid") and st.get("api_key"):
+            out = _agent_loop_api(None, st, msgs) if False else None
+        # gunakan fungsi loop milik handler lewat helper global
+        out = agent_loop_run(msgs)
+        result = out["choices"][0]["message"]["content"] if out else "gagal"
+    except Exception as e:
+        result = "error: %s" % e
+    # simpan hasil ke feed
+    feed = os.path.join(HOME, "feed.jsonl")
+    with open(feed, "a") as f:
+        f.write(json.dumps({"ts": _time.time(), "task": task, "result": result, "source": job.get("name","routine")}, ensure_ascii=False) + "\n")
+    return result
+
+def agent_loop_run(msgs):
+    """Agent loop generik module-level: otak sesuai mode (API/lokal), tools lokal, approval."""
+    st = load_settings()
+    use_api = st.get("mode") in ("cloud","hybrid") and st.get("api_key") and st.get("base_url")
+    history = list(msgs)
+    out = None
+    for _ in range(6):
+        sys_msg = {"role":"system","content":reload_system_prompt(history[-1]["content"] if history else "")}
+        if use_api:
+            import urllib.request
+            from urllib.parse import urlparse
+            try:
+                import agent.sandbox as _sb
+                _sb.allow_host(urlparse(st["base_url"]).netloc.split(":")[0])
+            except Exception: pass
+            req = urllib.request.Request(
+                st["base_url"].rstrip("/") + "/chat/completions",
+                data=json.dumps({"model": st.get("model","gpt-4o-mini"), "messages":[sys_msg]+history, "max_tokens": 1000}).encode(),
+                headers={"Content-Type":"application/json","Authorization":"Bearer "+st["api_key"]})
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    out = json.loads(r.read())
+            except Exception as e:
+                if st.get("mode") == "hybrid": use_api = False; continue
+                return {"choices":[{"message":{"content":"API gagal: %s" % e}}]}
+        else:
+            try:
+                with _lock:
+                    out = llm().create_chat_completion(messages=[sys_msg]+history, max_tokens=500, temperature=0.4)
+            except Exception as e:
+                return {"choices":[{"message":{"content":"error: %s" % e}}]}
+        text = (out["choices"][0]["message"].get("content") or "").strip()
+        call = parse_tool_call(text)
+        if not call or not call.get("tool"):
+            return out
+        name, args = call.get("tool"), call.get("args", {})
+        if _needs_approval(name):
+            dec = _request_approval(name, args)
+            if dec.get("status") != "approved":
+                result = {"error": "[DITOLAK USER] %s (%s)" % (name, dec.get("status"))}
+            else:
+                result = _run_tool(name, args)
+        else:
+            result = _run_tool(name, args)
+        history.append({"role":"assistant","content":text})
+        history.append({"role":"user","content":"[HASIL TOOL] " + json.dumps(result, ensure_ascii=False)})
+    return out
+
+def _run_tool(name, args):
+    try:
+        if name not in TOOLS:
+            return {"error": "tool '%s' tidak ada" % name}
+        return TOOLS[name](**args) if isinstance(args, dict) else TOOLS[name](args)
+    except Exception as ex:
+        return {"error": str(ex)}
+
+def _cron_scheduler():
+    os.makedirs(CRON_DIR, exist_ok=True)
+    while True:
+        now = _time.time()
+        try:
+            for fp in _glob.glob(os.path.join(CRON_DIR, "*.json")):
+                try: job = json.load(open(fp))
+                except Exception: continue
+                if job.get("paused"): continue
+                interval = int(job.get("interval_minutes", 60)) * 60
+                if now - job.get("last_run", 0) >= interval:
+                    job["last_run"] = now
+                    json.dump(job, open(fp, "w"))
+                    _threading.Thread(target=_cron_run_job, args=(job,), daemon=True).start()
+        except Exception as e:
+            print("[cron] error:", e)
+        _time.sleep(60)
+
+_threading.Thread(target=_cron_scheduler, daemon=True).start()
+
 if __name__ == "__main__":
     port = int(os.environ.get("LOKA_PORT", "8088"))
     print(f"[loka] engine UI: http://127.0.0.1:{port}  (buka di browser HP)")
     ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+

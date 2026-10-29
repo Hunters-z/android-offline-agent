@@ -377,5 +377,75 @@ document.getElementById('appOk').addEventListener('click',()=>decideApproval(tru
 document.getElementById('appDeny').addEventListener('click',()=>decideApproval(false));
 setInterval(pollApproval,1500); pollApproval();
 </script>
+
+<nav id="bottomNav" style="position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:50">
+  <button class="nv on" data-t="chat"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg><span>Chat</span></button>
+  <button class="nv" data-t="feed"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg><span>Feed</span></button>
+  <button class="nv" data-t="cron"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><span>Rutinitas</span></button>
+  <button class="nv" data-t="model"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3C9.25 3 6.2 5.94 6.02 9.64L4.1 12.2c-.25.33-.01.8.4.8H6v3c0 1.1.9 2 2 2h1v3h7v-4.68c2.36-1.12 4-3.53 4-6.32 0-3.87-3.13-7-7-7z"/></svg><span>Model</span></button>
+  <button class="nv" data-t="api"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg><span>Otak API</span></button>
+</nav>
+<style>
+.nv{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:#8a92a0;font-size:10px;font-weight:600;padding:6px 0;cursor:pointer}
+.nv.on{color:var(--acc)}
+main{padding-bottom:70px !important}
+#feedView,#cronView{display:none;position:fixed;inset:0;top:0;background:var(--bg);z-index:40;overflow-y:auto;padding:64px 16px 90px}
+.fcard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--sh-sm)}
+.fcard b{font-size:13px}
+.fcard p{font-size:12.5px;color:var(--dim);margin:6px 0 0;white-space:pre-wrap}
+.fcard small{color:#8a92a0;font-size:10.5px}
+.cronrow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:8px}
+.cronrow b{font-size:13px;flex:1}
+.cronrow small{display:block;color:#8a92a0;font-size:11px}
+</style>
+<script>
+document.querySelectorAll('.nv').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.nv').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const t=b.dataset.t;
+  document.getElementById('feedView').style.display = t==='feed'?'block':'none';
+  document.getElementById('cronView').style.display = t==='cron'?'block':'none';
+  if(t==='feed') loadFeed();
+  if(t==='cron') loadCron();
+  if(t==='model') document.getElementById('sheet').classList.add('open');
+  if(t==='api') openApi();
+}));
+async function loadFeed(){
+  const j=await (await fetch('/api/feed')).json();
+  const el=document.getElementById('feedList');
+  el.innerHTML = (j.items||[]).map(it=>'<div class="fcard"><b>'+esc(it.task)+'</b><small> · '+new Date(it.ts*1000).toLocaleString('id-ID')+'</small><p>'+esc(it.result)+'</p></div>').join('') || '<p style="text-align:center;color:#8a92a0;font-size:13px;margin-top:40px">Belum ada hasil rutinitas</p>';
+}
+async function loadCron(){
+  const j=await (await fetch('/api/cron')).json();
+  document.getElementById('cronList').innerHTML=(j.items||[]).map(it=>
+    '<div class="cronrow"><div style="flex:1"><b>'+esc(it.name)+'</b><small>tiap '+it.interval_minutes+' mnt · '+esc(it.task.slice(0,40))+'…</small></div><button onclick="delCron(\''+it.id+'\')" style="border:none;background:none;color:#dc2626;cursor:pointer;font-size:12px;font-weight:600">Hapus</button></div>').join('') || '<p style="text-align:center;color:#8a92a0;font-size:13px;margin-top:40px">Belum ada rutinitas</p>';
+}
+async function delCron(id){ await fetch('/api/cron/del/'+id,{method:'POST'}); loadCron(); }
+function esc(t){ return (t||'').replace(/</g,'&lt;'); }
+async function addCron(){
+  const name=document.getElementById('cronName').value.trim()||'rutinitas';
+  const task=document.getElementById('cronTask').value.trim();
+  const mins=parseInt(document.getElementById('cronMins').value)||60;
+  if(!task) return;
+  await fetch('/api/cron/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,task:task,interval_minutes:mins})});
+  document.getElementById('cronName').value=''; document.getElementById('cronTask').value='';
+  loadCron();
+}
+</script>
+<div id="feedView"><h2 style="font-size:16px;margin-bottom:12px">Feed — hasil rutinitas</h2><div id="feedList"></div></div>
+<div id="cronView">
+  <h2 style="font-size:16px;margin-bottom:12px">Rutinitas — berjalan sendiri</h2>
+  <div class="card" style="padding:14px;margin-bottom:14px">
+    <input id="cronName" placeholder="Nama (mis. Laporan pagi)" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px;font-size:13px">
+    <textarea id="cronTask" placeholder="Tugas untuk Loka, mis: cek catatan belanja lalu rangkum" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff;margin-bottom:8px;font-size:13px;min-height:60px;resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:12px;color:var(--dim)">Setiap</span>
+      <input id="cronMins" type="number" value="60" min="5" style="width:70px;padding:8px;border:1px solid var(--line);border-radius:10px;font-size:13px">
+      <span style="font-size:12px;color:var(--dim)">menit</span>
+      <button onclick="addCron()" style="margin-left:auto;padding:9px 16px;border:none;border-radius:10px;background:var(--acc);color:#fff;font-weight:700;font-size:13px;cursor:pointer">Tambah</button>
+    </div>
+  </div>
+  <div id="cronList"></div>
+</div>
 </body>
 </html>
