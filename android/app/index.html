@@ -136,6 +136,7 @@ textarea::placeholder{color:var(--dim)}
     <button id="burger" onclick="document.getElementById('side').classList.toggle('open')">☰</button>
     <div class="st"><b id="mName">Loka</b><span style="color:var(--dim);font-size:11.5px">Qwen2.5 · GGUF lokal</span></div>
     <span class="pill">100% OFFLINE</span>
+    <button id="apiBtn" title="Hubungkan AI" style="margin-right:8px">🔌 API</button>
     <button id="modelBtn">🧠 <span id="mLabel">tiny</span> ▾</button>
   </header>
   <div id="chat"></div>
@@ -205,6 +206,86 @@ $('inp').addEventListener('input',e=>{e.target.style.height='auto';e.target.styl
 fetch('/api/models').then(r=>r.json()).then(j=>{window.__MODELS_STATUS=j; renderModels();}).catch(()=>{});
 renderModels(); renderHist();
 if(hist[0].length===0){ addRow('ai','Halo Paduka 👋 Aku Loka — AI-mu yang 100% offline. Semua model tersimpan di HP ini dan tidak ada data yang keluar. Coba tanya sesuatu!'); }
+</script>
+
+<div id="apisheet" class="sheet-open" style="position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:90">
+  <div class="card" style="width:min(520px,92vw);padding:22px;max-height:82vh;overflow-y:auto">
+    <h2 style="font-size:16px;margin-bottom:4px">Hubungkan Otak AI (API)</h2>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:14px">Device tetap agent — hanya "otak" yang di cloud. Kunci API tersimpan lokal, tak pernah keluar ke UI.</p>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Mode</label>
+    <div id="modeRow" style="display:flex;gap:8px;margin-bottom:14px">
+      <button data-m="local" class="modeBtn">📴 Lokal</button>
+      <button data-m="cloud" class="modeBtn">🔌 Cloud API</button>
+      <button data-m="hybrid" class="modeBtn">🔄 Hybrid</button>
+    </div>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Provider</label>
+    <select id="provider" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);margin-bottom:10px">
+      <option value="openai">OpenAI (api.openai.com)</option>
+      <option value="gemini">Google Gemini (OpenAI-compatible)</option>
+      <option value="openrouter">OpenRouter (multi-model)</option>
+      <option value="custom">Custom / lokal LLM server</option>
+    </select>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Base URL</label>
+    <input id="baseurl" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);margin-bottom:10px">
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">API Key</label>
+    <input id="apikey" type="password" placeholder="tempel API key di sini" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);margin-bottom:10px">
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Nama model</label>
+    <input id="apimodel" placeholder="gpt-4o-mini / gemini-2.0-flash / ..." style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--txt);margin-bottom:14px">
+    <div style="display:flex;gap:8px">
+      <button id="apiSave" style="flex:1;padding:11px;border:none;border-radius:12px;background:var(--acc);color:#fff;font-weight:700;cursor:pointer">Simpan & Pakai</button>
+      <button id="apiTest" style="padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);color:var(--txt);cursor:pointer">Tes</button>
+    </div>
+    <div id="apiStatus" style="font-size:12px;margin-top:10px;min-height:16px"></div>
+  </div>
+</div>
+<style>
+.modeBtn{flex:1;padding:9px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--dim);font-size:12px;font-weight:600;cursor:pointer}
+.modeBtn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#apiBtn{border:1px solid var(--line);background:var(--panel2);color:var(--txt);padding:8px 12px;border-radius:11px;font-size:13px;cursor:pointer}
+#apiBtn:hover{border-color:var(--acc)}
+</style>
+<script>
+const PROVIDERS = {
+  openai:     { url:'https://api.openai.com/v1',  model:'gpt-4o-mini' },
+  gemini:     { url:'https://generativelanguage.googleapis.com/v1beta/openai', model:'gemini-2.0-flash' },
+  openrouter: { url:'https://openrouter.ai/api/v1', model:'meta-llama/llama-3.2-3b-instruct:free' },
+  custom:     { url:'http://localhost:11434/v1', model:'llama3.2' },
+};
+let curMode='local';
+function openApi(){ $('apisheet').style.display='flex'; loadApi(); }
+$('apiBtn')?.addEventListener('click', openApi);
+$('apisheet').addEventListener('click', e=>{ if(e.target.id==='apisheet') e.target.style.display='none'; });
+function setMode(m){ curMode=m; document.querySelectorAll('.modeBtn').forEach(b=>b.classList.toggle('on', b.dataset.m===m)); }
+document.querySelectorAll('.modeBtn').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.m)));
+$('provider').addEventListener('change', e=>{ const p=PROVIDERS[e.target.value]; $('baseurl').value=p.url; $('apimodel').value=p.model; });
+async function loadApi(){
+  try{
+    const st = await (await fetch('/api/settings')).json();
+    curMode = st.mode||'local'; setMode(curMode);
+    $('provider').value = st.provider||'openai';
+    $('baseurl').value = st.base_url||PROVIDERS[st.provider||'openai'].url;
+    $('apimodel').value = st.model||'';
+    $('apikey').value = '';
+    $('apiStatus').textContent = st.api_key ? ('Kunci tersimpan: '+st.api_key) : 'Belum ada kunci tersimpan';
+  }catch(e){ $('apiStatus').textContent='Gagal memuat pengaturan'; }
+}
+$('apiSave').addEventListener('click', async ()=>{
+  const body = { mode:curMode, provider:$('provider').value, base_url:$('baseurl').value.trim(), model:$('apimodel').value.trim() };
+  if($('apikey').value.trim()) body.api_key = $('apikey').value.trim();
+  const r = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j = await r.json();
+  $('apiStatus').textContent = j.ok ? '✓ Tersimpan — mode '+curMode : '✕ Gagal';
+  if(j.ok) setTimeout(()=>$('apisheet').style.display='none', 900);
+});
+$('apiTest').addEventListener('click', async ()=>{
+  $('apiStatus').textContent='Menguji…';
+  try{
+    const r = await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'user',content:'balas singkat: siapa kamu?'}]})});
+    const j = await r.json();
+    $('apiStatus').textContent = j.choices ? '✓ Terhubung: '+(j.choices[0].message.content||'').slice(0,60) : '✕ '+(j.error||'gagal');
+  }catch(e){ $('apiStatus').textContent='✕ '+e.message; }
+});
 </script>
 </body>
 </html>

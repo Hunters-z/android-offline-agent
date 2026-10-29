@@ -5,6 +5,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHandler
 
 HOME = os.environ.get("LOKA_HOME", os.path.expanduser("~/loka"))
+SETTINGS_FILE = os.path.join(HOME, "ai_settings.json")
+
+def load_settings():
+    try: return json.load(open(SETTINGS_FILE))
+    except Exception: return {"mode":"local","provider":"openai","base_url":"https://api.openai.com/v1","api_key":"","model":"gpt-4o-mini"}
+
+def save_settings(st):
+    json.dump(st, open(SETTINGS_FILE,"w"))
 APP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "android", "app")
 
 # Sandbox tetap aktif (guard berjalan saat import)
@@ -30,6 +38,10 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(code); self.send_header("Content-Type","application/json")
         self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def do_GET(self):
+        if self.path == "/api/settings":
+            st = load_settings()
+            safe = dict(st); safe["api_key"] = (st.get("api_key","")[:4] + "…" ) if st.get("api_key") else ""
+            return self._json(safe)
         if self.path == "/api/models":
             return self._json({m["key"]: {"downloaded": m["downloaded"], "active": m["active"]} for m in list_models()})
         return super().do_GET()
@@ -39,8 +51,37 @@ class H(SimpleHTTPRequestHandler):
             try:
                 r = set_active(body.get("model","tiny")); return self._json({"ok": True, **r})
             except ValueError as e: return self._json({"ok": False, "error": str(e)}, 400)
+        if self.path == "/api/settings":
+            # simpan konfigurasi provider
+            allowed = {k: body.get(k) for k in ("mode","provider","base_url","api_key","model") if k in body}
+            st = load_settings(); st.update(allowed); save_settings(st)
+            return self._json({"ok": True, "mode": st["mode"]})
         if self.path == "/v1/chat/completions":
+            st = load_settings()
+            from agent import sandbox as _sb
+            if st.get("mode") in ("cloud","hybrid") and st.get("base_url"):
+                try:
+                    from urllib.parse import urlparse
+                    _sb.allow_host(urlparse(st["base_url"]).netloc.split(":")[0])
+                except Exception: pass
             msgs = body.get("messages", [])
+            # MODE CLOUD/HYBRID: proxy ke provider (key tidak pernah dikirim ke UI)
+            if st.get("mode") in ("cloud","hybrid") and st.get("api_key") and st.get("base_url"):
+                try:
+                    import urllib.request
+                    req = urllib.request.Request(
+                        st["base_url"].rstrip("/") + "/chat/completions",
+                        data=json.dumps({"model": st.get("model","gpt-4o-mini"), "messages": msgs, "max_tokens": 1000}).encode(),
+                        headers={"Content-Type":"application/json","Authorization":"Bearer "+st["api_key"]})
+                    with urllib.request.urlopen(req, timeout=60) as r:
+                        out = json.loads(r.read())
+                    return self._json(out)
+                except Exception as e:
+                    if st.get("mode") == "hybrid":
+                        pass  # fallback ke lokal di bawah
+                    else:
+                        return self._json({"error": "API gagal: %s" % e}, 502)
+            # MODE LOKAL
             try:
                 with _lock:
                     out = llm().create_chat_completion(messages=msgs, max_tokens=500, temperature=0.4)

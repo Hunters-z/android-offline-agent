@@ -15,7 +15,8 @@ def expect_block(desc, fn):
     except Exception as e:
         fails.append(f"error lain {desc}: {e}")
 
-expect_block("socket.socket", lambda: __import__("socket").socket())
+expect_block("socket.connect luar", lambda: __import__("socket").socket().connect(("8.8.8.8", 53)))
+expect_block("create_connection luar", lambda: __import__("socket").create_connection(("example.com", 443)))
 expect_block("getaddrinfo", lambda: __import__("socket").getaddrinfo("example.com", 443))
 expect_block("os.popen curl", lambda: os.popen("curl https://example.com"))
 expect_block("subprocess wget", lambda: __import__("subprocess").run(["wget","http://x"]))

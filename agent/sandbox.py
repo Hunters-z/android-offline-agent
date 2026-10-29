@@ -27,11 +27,22 @@ class _GuardedSocket(socket.socket):
         raise OSError(_blocked_msg)
 
 socket.socket = _GuardedSocket
-socket.create_connection = _blocked
+_orig_create_connection = socket.create_connection
+def _guard_create_connection(address, *a, **k):
+    host = address[0] if isinstance(address, (tuple, list)) else str(address)
+    if host in _LOOPBACK or str(host).startswith("127.") or str(host) in ALLOWED_HOSTS:
+        return _orig_create_connection(address, *a, **k)
+    raise OSError(_blocked_msg)
+socket.create_connection = _guard_create_connection
+# host API yang diizinkan saat mode cloud (diatur runtime oleh server.py)
+ALLOWED_HOSTS = set()
+def allow_host(h): ALLOWED_HOSTS.add(str(h))
+
 def _guard_getaddrinfo(host, *a, **k):
-    if str(host) not in _LOOPBACK and not str(host).startswith("127."):
+    h = str(host)
+    if h not in _LOOPBACK and not h.startswith("127.") and h not in ALLOWED_HOSTS:
         raise OSError(_blocked_msg)
-    return _csock.getaddrinfo(host, *a, **k)
+    return _csock.getaddrinfo(h, *a, **k)
 socket.getaddrinfo = _guard_getaddrinfo
 socket.gethostbyname = _blocked
 
